@@ -23,6 +23,8 @@ jobs:
       CF_D1_DATABASE_ID: ${{ secrets.CF_D1_DATABASE_ID }}
       CF_KV_NAMESPACE_TITLE: ${{ vars.CF_KV_NAMESPACE_TITLE }}
       CF_D1_DATABASE_NAME: ${{ vars.CF_D1_DATABASE_NAME }}
+      CF_R2_BUCKET_NAME: ${{ vars.CF_R2_BUCKET_NAME }}
+      CF_R2_PREVIEW_BUCKET_NAME: ${{ vars.CF_R2_PREVIEW_BUCKET_NAME }}
 
     steps:
       - name: Checkout
@@ -42,18 +44,21 @@ jobs:
       - name: Install dependencies (skip postinstall in CI)
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-
-      - name: Resolve KV/D1 resources (auto find or create)
+      - name: Resolve KV/D1/R2 resources (auto find or create)
         shell: bash
         run: |
           set -euo pipefail
 
           KV_TITLE="${CF_KV_NAMESPACE_TITLE:-smail-kv}"
           D1_NAME="${CF_D1_DATABASE_NAME:-smail-database}"
+          R2_BUCKET_NAME="${CF_R2_BUCKET_NAME:-smail-attachments}"
+          R2_PREVIEW_BUCKET_NAME="${CF_R2_PREVIEW_BUCKET_NAME:-smail-attachments-preview}"
           CF_API_BASE="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}"
 
           echo "Using KV title: $KV_TITLE"
           echo "Using D1 name: $D1_NAME"
+          echo "Using R2 bucket: $R2_BUCKET_NAME"
+          echo "Using R2 preview bucket: $R2_PREVIEW_BUCKET_NAME"
 
           if [ -n "${CF_KV_NAMESPACE_ID:-}" ]; then
             KV_ID="$CF_KV_NAMESPACE_ID"
@@ -97,6 +102,32 @@ jobs:
             fi
           fi
 
+          ensure_r2_bucket() {
+            local bucket_name="$1"
+            local list_json
+            local exists
+
+            list_json="$(curl -fsS \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H "Content-Type: application/json" \
+              "${CF_API_BASE}/r2/buckets")"
+
+            exists="$(echo "$list_json" | jq -r --arg b "$bucket_name" 'if ([.result.buckets[]?.name] | index($b)) then "yes" else "no" end')"
+
+            if [ "$exists" != "yes" ]; then
+              echo "Creating R2 bucket: $bucket_name"
+              curl -fsS -X PUT \
+                -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+                -H "Content-Type: application/json" \
+                "${CF_API_BASE}/r2/buckets/${bucket_name}" >/dev/null
+            else
+              echo "R2 bucket exists: $bucket_name"
+            fi
+          }
+
+          ensure_r2_bucket "$R2_BUCKET_NAME"
+          ensure_r2_bucket "$R2_PREVIEW_BUCKET_NAME"
+
           if [ -z "${KV_ID:-}" ] || [ "$KV_ID" = "null" ]; then
             echo "Failed to resolve KV namespace id" >&2
             exit 1
@@ -111,6 +142,8 @@ jobs:
             echo "KV_ID=$KV_ID"
             echo "D1_ID=$D1_ID"
             echo "D1_NAME=$D1_NAME"
+            echo "R2_BUCKET_NAME=$R2_BUCKET_NAME"
+            echo "R2_PREVIEW_BUCKET_NAME=$R2_PREVIEW_BUCKET_NAME"
           } >> "$GITHUB_ENV"
 
       - name: Generate wrangler.jsonc from template
@@ -138,4 +171,6 @@ jobs:
           echo "KV namespace id: ${KV_ID:-unknown}"
           echo "D1 database id: ${D1_ID:-unknown}"
           echo "D1 database name: ${D1_NAME:-unknown}"
+          echo "R2 bucket: ${R2_BUCKET_NAME:-unknown}"
+          echo "R2 preview bucket: ${R2_PREVIEW_BUCKET_NAME:-unknown}"
           echo "Done."
