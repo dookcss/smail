@@ -50,6 +50,7 @@ jobs:
 
           KV_TITLE="${CF_KV_NAMESPACE_TITLE:-smail-kv}"
           D1_NAME="${CF_D1_DATABASE_NAME:-smail-database}"
+          CF_API_BASE="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}"
 
           echo "Using KV title: $KV_TITLE"
           echo "Using D1 name: $D1_NAME"
@@ -57,18 +58,42 @@ jobs:
           if [ -n "${CF_KV_NAMESPACE_ID:-}" ]; then
             KV_ID="$CF_KV_NAMESPACE_ID"
           else
-            KV_ID="$(pnpm wrangler kv namespace list --json | jq -r --arg t "$KV_TITLE" '.[] | select(.title==$t) | .id' | head -n1 || true)"
+            KV_LIST_JSON="$(curl -fsS \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H "Content-Type: application/json" \
+              "${CF_API_BASE}/storage/kv/namespaces?page=1&per_page=1000")"
+
+            KV_ID="$(echo "$KV_LIST_JSON" | jq -r --arg t "$KV_TITLE" '.result[]? | select(.title == $t) | .id' | head -n1 || true)"
+
             if [ -z "${KV_ID:-}" ] || [ "$KV_ID" = "null" ]; then
-              KV_ID="$(pnpm wrangler kv namespace create "$KV_TITLE" --json | jq -r '.id')"
+              KV_CREATE_JSON="$(curl -fsS -X POST \
+                -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+                -H "Content-Type: application/json" \
+                "${CF_API_BASE}/storage/kv/namespaces" \
+                --data "$(jq -cn --arg title "$KV_TITLE" '{title:$title}')")"
+
+              KV_ID="$(echo "$KV_CREATE_JSON" | jq -r '.result.id // empty')"
             fi
           fi
 
           if [ -n "${CF_D1_DATABASE_ID:-}" ]; then
             D1_ID="$CF_D1_DATABASE_ID"
           else
-            D1_ID="$(pnpm wrangler d1 list --json | jq -r --arg n "$D1_NAME" '.[] | select(.name==$n) | (.uuid // .id)' | head -n1 || true)"
+            D1_LIST_JSON="$(curl -fsS \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H "Content-Type: application/json" \
+              "${CF_API_BASE}/d1/database?page=1&per_page=1000")"
+
+            D1_ID="$(echo "$D1_LIST_JSON" | jq -r --arg n "$D1_NAME" '.result[]? | select(.name == $n) | (.uuid // .id)' | head -n1 || true)"
+
             if [ -z "${D1_ID:-}" ] || [ "$D1_ID" = "null" ]; then
-              D1_ID="$(pnpm wrangler d1 create "$D1_NAME" --json | jq -r '.uuid // .id')"
+              D1_CREATE_JSON="$(curl -fsS -X POST \
+                -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+                -H "Content-Type: application/json" \
+                "${CF_API_BASE}/d1/database" \
+                --data "$(jq -cn --arg name "$D1_NAME" '{name:$name}')")"
+
+              D1_ID="$(echo "$D1_CREATE_JSON" | jq -r '.result.uuid // .result.id // empty')"
             fi
           fi
 
