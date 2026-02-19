@@ -193,3 +193,39 @@ pnpm wrangler versions deploy
 ---
 
 使用 ❤️ 和 React Router 构建。
+
+## 🤖 GitHub Actions 自动部署到 Cloudflare
+
+项目已支持通过工作流自动部署，工作流文件：
+
+- `.github/workflows/deploy-cf.yml`
+
+### 触发方式
+
+- 推送到 `main` 分支自动部署
+- 在 GitHub Actions 页面手动触发（`workflow_dispatch`）
+
+### 需要配置的 GitHub Secrets
+
+在仓库 `Settings -> Secrets and variables -> Actions` 中添加：
+- `CLOUDFLARE_API_TOKEN`：Cloudflare API Token（需包含 Workers/D1/KV 权限）
+- `CLOUDFLARE_ACCOUNT_ID`：Cloudflare Account ID
+- `CF_KV_NAMESPACE_ID`：KV Namespace ID（可选，填了则直接使用）
+- `CF_D1_DATABASE_ID`：D1 Database ID（可选，填了则直接使用）
+- `CF_SESSION_SECRET`：会话密钥（用于写入 Worker Secret: `SESSION_SECRET`）
+- `CF_KV_NAMESPACE_TITLE`（Repository Variable）：KV 名称（可选，默认 `smail-kv`）
+- `CF_D1_DATABASE_NAME`（Repository Variable）：D1 名称（可选，默认 `smail-database`）
+
+> 当 `CF_KV_NAMESPACE_ID` / `CF_D1_DATABASE_ID` 未提供时，工作流会自动按名称查找，若不存在则自动创建并继续部署。
+
+### 工作流做了什么
+
+1. 安装依赖并执行类型检查
+2. 从 `wrangler.example.jsonc` 生成 `wrangler.jsonc`（注入 KV/D1 ID）
+3. 执行 D1 远程迁移
+4. 同步 Worker Secret（`SESSION_SECRET`）
+5. 执行 `wrangler deploy`
+
+> 如果你的默认分支不是 `main`，请修改 `.github/workflows/deploy-cf.yml` 中的分支名。
+> 如果你使用的是不同的数据库名，请同步调整 `package.json` 里的 `db:migrate:remote` 脚本。
+
