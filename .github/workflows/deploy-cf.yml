@@ -57,11 +57,11 @@ jobs:
           CF_API_BASE="${CF_API_ROOT}/accounts/${CLOUDFLARE_ACCOUNT_ID}"
 
           if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
-            echo "::error::Missing secret CLOUDFLARE_API_TOKEN"
+            echo "::error::Missing secret CLOUDFLARE_API_TOKEN" >&2
             exit 1
           fi
           if [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
-            echo "::error::Missing secret CLOUDFLARE_ACCOUNT_ID"
+            echo "::error::Missing secret CLOUDFLARE_ACCOUNT_ID" >&2
             exit 1
           fi
 
@@ -97,17 +97,17 @@ jobs:
             fi
 
             if [ "$status" -ge 400 ]; then
-              echo "::error::Cloudflare API failed - ${context} (HTTP ${status})"
-              echo "::group::Cloudflare API error detail - ${context}"
+              echo "::error::Cloudflare API failed - ${context} (HTTP ${status})" >&2
+              echo "::group::Cloudflare API error detail - ${context}" >&2
               if command -v jq >/dev/null 2>&1; then
-                jq -r '.errors[]? | "code=\(.code) message=\(.message)"' "$body_file" || true
-                jq '.' "$body_file" || cat "$body_file"
+                jq -r '.errors[]? | "code=\(.code) message=\(.message)"' "$body_file" >&2 || true
+                jq '.' "$body_file" >&2 || cat "$body_file" >&2
               else
-                cat "$body_file"
+                cat "$body_file" >&2
               fi
-              echo "::endgroup::"
+              echo "::endgroup::" >&2
               if [ "$status" -eq 403 ]; then
-                echo "::error::HTTP 403 usually means wrong token type, insufficient scope, account scope mismatch, or IP filtering on token."
+                echo "::error::HTTP 403 usually means wrong token type, insufficient scope, account scope mismatch, or IP filtering on token." >&2
               fi
               rm -f "$body_file" "$headers_file"
               exit 1
