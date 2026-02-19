@@ -53,29 +53,96 @@ jobs:
           D1_NAME="${CF_D1_DATABASE_NAME:-smail-database}"
           R2_BUCKET_NAME="${CF_R2_BUCKET_NAME:-smail-attachments}"
           R2_PREVIEW_BUCKET_NAME="${CF_R2_PREVIEW_BUCKET_NAME:-smail-attachments-preview}"
-          CF_API_BASE="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}"
+          CF_API_ROOT="https://api.cloudflare.com/client/v4"
+          CF_API_BASE="${CF_API_ROOT}/accounts/${CLOUDFLARE_ACCOUNT_ID}"
+
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::error::Missing secret CLOUDFLARE_API_TOKEN"
+            exit 1
+          fi
+          if [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "::error::Missing secret CLOUDFLARE_ACCOUNT_ID"
+            exit 1
+          fi
 
           echo "Using KV title: $KV_TITLE"
           echo "Using D1 name: $D1_NAME"
           echo "Using R2 bucket: $R2_BUCKET_NAME"
           echo "Using R2 preview bucket: $R2_PREVIEW_BUCKET_NAME"
+          echo "Cloudflare account id prefix: ${CLOUDFLARE_ACCOUNT_ID:0:8}..."
+
+          cf_call_url() {
+            local method="$1"
+            local url="$2"
+            local data="${3:-}"
+            local context="${4:-$2}"
+            local body_file headers_file status
+
+            body_file="$(mktemp)"
+            headers_file="$(mktemp)"
+
+            if [ -n "$data" ]; then
+              status="$(curl -sS -D "$headers_file" -o "$body_file" -w "%{http_code}" \
+                -X "$method" \
+                -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+                -H "Content-Type: application/json" \
+                --data "$data" \
+                "$url")"
+            else
+              status="$(curl -sS -D "$headers_file" -o "$body_file" -w "%{http_code}" \
+                -X "$method" \
+                -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+                -H "Content-Type: application/json" \
+                "$url")"
+            fi
+
+            if [ "$status" -ge 400 ]; then
+              echo "::error::Cloudflare API failed - ${context} (HTTP ${status})"
+              echo "::group::Cloudflare API error detail - ${context}"
+              if command -v jq >/dev/null 2>&1; then
+                jq -r '.errors[]? | "code=\(.code) message=\(.message)"' "$body_file" || true
+                jq '.' "$body_file" || cat "$body_file"
+              else
+                cat "$body_file"
+              fi
+              echo "::endgroup::"
+              if [ "$status" -eq 403 ]; then
+                echo "::error::HTTP 403 usually means wrong token type, insufficient scope, account scope mismatch, or IP filtering on token."
+              fi
+              rm -f "$body_file" "$headers_file"
+              exit 1
+            fi
+
+            cat "$body_file"
+            rm -f "$body_file" "$headers_file"
+          }
+
+          cf_account_call() {
+            local method="$1"
+            local path="$2"
+            local data="${3:-}"
+            local context="${4:-$2}"
+            cf_call_url "$method" "${CF_API_BASE}${path}" "$data" "$context"
+          }
+
+          echo "Verifying Cloudflare API token..."
+          TOKEN_VERIFY_JSON="$(cf_call_url GET "${CF_API_ROOT}/user/tokens/verify" "" "Verify API token")"
+          if command -v jq >/dev/null 2>&1; then
+            echo "Token status: $(echo "$TOKEN_VERIFY_JSON" | jq -r '.result.status // "unknown"')"
+            echo "Token id: $(echo "$TOKEN_VERIFY_JSON" | jq -r '.result.id // "unknown"')"
+          fi
 
           if [ -n "${CF_KV_NAMESPACE_ID:-}" ]; then
             KV_ID="$CF_KV_NAMESPACE_ID"
+            echo "Using KV from secret: $KV_ID"
           else
-            KV_LIST_JSON="$(curl -fsS \
-              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-              -H "Content-Type: application/json" \
-              "${CF_API_BASE}/storage/kv/namespaces?page=1&per_page=1000")"
+            KV_LIST_JSON="$(cf_account_call GET "/storage/kv/namespaces?page=1&per_page=1000" "" "List KV namespaces")"
 
             KV_ID="$(echo "$KV_LIST_JSON" | jq -r --arg t "$KV_TITLE" '.result[]? | select(.title == $t) | .id' | head -n1 || true)"
 
             if [ -z "${KV_ID:-}" ] || [ "$KV_ID" = "null" ]; then
-              KV_CREATE_JSON="$(curl -fsS -X POST \
-                -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-                -H "Content-Type: application/json" \
-                "${CF_API_BASE}/storage/kv/namespaces" \
-                --data "$(jq -cn --arg title "$KV_TITLE" '{title:$title}')")"
+              echo "KV namespace not found, creating: $KV_TITLE"
+              KV_CREATE_JSON="$(cf_account_call POST "/storage/kv/namespaces" "$(jq -cn --arg title "$KV_TITLE" '{title:$title}')" "Create KV namespace: $KV_TITLE")"
 
               KV_ID="$(echo "$KV_CREATE_JSON" | jq -r '.result.id // empty')"
             fi
@@ -83,20 +150,15 @@ jobs:
 
           if [ -n "${CF_D1_DATABASE_ID:-}" ]; then
             D1_ID="$CF_D1_DATABASE_ID"
+            echo "Using D1 from secret: $D1_ID"
           else
-            D1_LIST_JSON="$(curl -fsS \
-              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-              -H "Content-Type: application/json" \
-              "${CF_API_BASE}/d1/database?page=1&per_page=1000")"
+            D1_LIST_JSON="$(cf_account_call GET "/d1/database?page=1&per_page=1000" "" "List D1 databases")"
 
             D1_ID="$(echo "$D1_LIST_JSON" | jq -r --arg n "$D1_NAME" '.result[]? | select(.name == $n) | (.uuid // .id)' | head -n1 || true)"
 
             if [ -z "${D1_ID:-}" ] || [ "$D1_ID" = "null" ]; then
-              D1_CREATE_JSON="$(curl -fsS -X POST \
-                -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-                -H "Content-Type: application/json" \
-                "${CF_API_BASE}/d1/database" \
-                --data "$(jq -cn --arg name "$D1_NAME" '{name:$name}')")"
+              echo "D1 database not found, creating: $D1_NAME"
+              D1_CREATE_JSON="$(cf_account_call POST "/d1/database" "$(jq -cn --arg name "$D1_NAME" '{name:$name}')" "Create D1 database: $D1_NAME")"
 
               D1_ID="$(echo "$D1_CREATE_JSON" | jq -r '.result.uuid // .result.id // empty')"
             fi
@@ -104,22 +166,14 @@ jobs:
 
           ensure_r2_bucket() {
             local bucket_name="$1"
-            local list_json
-            local exists
+            local list_json exists
 
-            list_json="$(curl -fsS \
-              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-              -H "Content-Type: application/json" \
-              "${CF_API_BASE}/r2/buckets")"
-
+            list_json="$(cf_account_call GET "/r2/buckets" "" "List R2 buckets")"
             exists="$(echo "$list_json" | jq -r --arg b "$bucket_name" 'if ([.result.buckets[]?.name] | index($b)) then "yes" else "no" end')"
 
             if [ "$exists" != "yes" ]; then
-              echo "Creating R2 bucket: $bucket_name"
-              curl -fsS -X PUT \
-                -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-                -H "Content-Type: application/json" \
-                "${CF_API_BASE}/r2/buckets/${bucket_name}" >/dev/null
+              echo "R2 bucket not found, creating: $bucket_name"
+              cf_account_call PUT "/r2/buckets/${bucket_name}" "{}" "Create R2 bucket: $bucket_name" >/dev/null
             else
               echo "R2 bucket exists: $bucket_name"
             fi
