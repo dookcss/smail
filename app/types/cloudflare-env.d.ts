@@ -1,7 +1,10 @@
 export {};
 
 declare global {
-	interface Env {
-		SESSION_SECRET: string;
+	namespace Cloudflare {
+		interface Env {
+			SESSION_SECRET: string;
+		}
 	}
 }
+
