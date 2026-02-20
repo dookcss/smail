@@ -1,6 +1,5 @@
 import { Link } from "react-router";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
-import { Button } from "~/components/ui/button";
+import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { cn } from "~/lib/utils";
 
 interface MailItemProps {
@@ -12,6 +11,20 @@ interface MailItemProps {
 	isRead?: boolean;
 }
 
+function formatDate(dateString: string) {
+	const date = new Date(dateString);
+	const now = new Date();
+	const diff = now.getTime() - date.getTime();
+
+	if (!Number.isFinite(diff)) return "--";
+	if (diff < 60 * 1000) return "刚刚";
+	if (diff < 60 * 60 * 1000) return `${Math.max(1, Math.floor(diff / (60 * 1000)))}分钟前`;
+	if (diff < 24 * 60 * 60 * 1000) return "今天";
+	if (diff < 48 * 60 * 60 * 1000) return "昨天";
+
+	return date.toLocaleDateString("zh-CN", { month: "short", day: "numeric" });
+}
+
 export function MailItem({
 	id,
 	name,
@@ -20,65 +33,44 @@ export function MailItem({
 	date,
 	isRead = true,
 }: MailItemProps) {
-	const domain = email.split("@")[1];
-
-	const formatDate = (dateString: string) => {
-		const date = new Date(dateString);
-		const now = new Date();
-		const diffTime = Math.abs(now.getTime() - date.getTime());
-		const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-		if (diffDays === 1) return "今天";
-		if (diffDays === 2) return "昨天";
-		if (diffDays <= 7) return `${diffDays - 1}天前`;
-		return date.toLocaleDateString("zh-CN", { month: "short", day: "numeric" });
-	};
+	const safeName = (name || email || "?").trim();
+	const initials = safeName.slice(0, 2).toUpperCase();
 
 	return (
-		<Button
-			asChild
-			size="sm"
+		<Link
+			to={`/mail/${id}`}
 			className={cn(
-				"h-16 sm:h-20 w-full rounded-none justify-start gap-3 sm:gap-4 relative p-3 sm:p-4",
-				isRead ? "opacity-90 hover:bg-white/8" : "bg-white/16 hover:bg-white/22",
+				"block w-full rounded-xl border p-3 sm:p-4 transition-all",
+				"bg-white/7 border-white/14 hover:bg-white/12 hover:border-white/24",
+				!isRead && "bg-white/14 border-white/28",
 			)}
-			variant="ghost"
 		>
-			<Link to={`/mail/${id}`}>
-				{!isRead && (
-					<div className="absolute left-2 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-white rounded-full" />
-				)}
-				<Avatar className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10">
-					<AvatarImage src={`https://unavatar.io/${domain}`} />
-					<AvatarFallback className="text-xs sm:text-sm">
-						{name.slice(0, 2).toUpperCase()}
+			<div className="flex items-start gap-3 sm:gap-4 min-w-0">
+				<Avatar className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 border border-white/22 bg-white/10">
+					<AvatarFallback className="text-xs sm:text-sm text-white bg-transparent">
+						{initials}
 					</AvatarFallback>
 				</Avatar>
-				<div className="flex-1 min-w-0 space-y-0.5 sm:space-y-1">
-					<div className="flex items-center justify-between">
-						<span
-							className={cn(
-								"text-sm font-medium truncate",
-								!isRead && "font-semibold",
-							)}
-						>
-							{name}
+
+				<div className="flex-1 min-w-0 space-y-1">
+					<div className="flex items-center justify-between gap-2">
+						<span className={cn("text-sm truncate text-white/92", !isRead && "font-semibold text-white")}>
+							{safeName}
 						</span>
-						<span className="text-xs text-white/65 flex-shrink-0 ml-2">
+						<span className="text-[11px] sm:text-xs text-white/65 flex-shrink-0">
 							{formatDate(date)}
 						</span>
 					</div>
+
 					<div className="text-xs text-white/65 truncate">{email}</div>
-					<div
-						className={cn(
-							"text-xs sm:text-sm truncate",
-							isRead ? "text-white/72" : "text-white font-medium",
-						)}
-					>
+					<div className={cn("text-xs sm:text-sm truncate text-white/78", !isRead && "text-white/96 font-medium")}>
 						{subject}
 					</div>
 				</div>
-			</Link>
-		</Button>
+			</div>
+		</Link>
+	);
+}
+
 	);
 }

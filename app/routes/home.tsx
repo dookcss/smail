@@ -84,7 +84,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 			name: emailRecord.fromAddress.split("@")[0] || emailRecord.fromAddress,
 			email: emailRecord.fromAddress,
 			subject: emailRecord.subject || "(无主题)",
-			date: emailRecord.receivedAt.toISOString().split("T")[0],
+			date: emailRecord.receivedAt.toISOString(),
 			isRead: emailRecord.isRead,
 		}));
 
@@ -245,11 +245,11 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 							<CardContent className="p-0">
 								<ScrollArea className="h-96">
 									{loaderData.mails.length > 0 ? (
-										<div className="divide-y divide-white/10">
-											{loaderData.mails.map((mail) => (
-												<MailItem key={mail.id} {...mail} />
-											))}
-										</div>
+									<div className="p-2 space-y-2">
+										{loaderData.mails.map((mail) => (
+											<MailItem key={mail.id} {...mail} />
+										))}
+									</div>
 									) : (
 										<div className="flex flex-col items-center justify-center py-12 text-glass px-4">
 											<InboxIcon className="w-10 h-10 mb-3 text-white/45" />
