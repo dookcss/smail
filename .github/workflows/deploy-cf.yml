@@ -204,7 +204,6 @@ jobs:
           fi
 
           {
-          {
             echo "KV_ID=$KV_ID"
             echo "D1_ID=$D1_ID"
             echo "D1_NAME=$D1_NAME"
