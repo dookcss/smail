@@ -1,13 +1,10 @@
 import randomName from "@scaleway/random-name";
 import {
-	Globe2Icon,
 	InboxIcon,
 	InfoIcon,
 	Loader2Icon,
 	Mail,
 	RefreshCcwIcon,
-	ShieldCheckIcon,
-	ZapIcon,
 } from "lucide-react";
 import { customAlphabet } from "nanoid";
 import React from "react";
@@ -26,7 +23,6 @@ import { Button } from "~/components/ui/button";
 import {
 	Card,
 	CardContent,
-	CardDescription,
 	CardHeader,
 	CardTitle,
 } from "~/components/ui/card";
@@ -42,40 +38,9 @@ import type { Route } from "./+types/home";
 
 export function meta(_: Route.MetaArgs) {
 	return [
-		{
-			title:
-				"Smail - 免费临时邮箱生成器 | 一次性邮箱地址生成 | 24小时有效保护隐私",
-		},
-		{
-			name: "description",
-			content:
-				"Smail提供最专业的免费临时邮箱服务，无需注册即可获得一次性邮件地址。24小时有效期，支持附件下载，完全匿名保护隐私。告别垃圾邮件，立即免费使用临时邮箱！",
-		},
-		{
-			name: "keywords",
-			content:
-				"临时邮箱,一次性邮箱,临时邮件,临时email,免费邮箱,隐私保护,垃圾邮件防护,临时邮箱网站,免费临时邮箱,临时邮箱服务,24小时邮箱,无需注册邮箱",
-		},
-		{ property: "og:title", content: "Smail - 免费临时邮箱生成器 | 一次性邮件地址" },
-		{
-			property: "og:description",
-			content: "保护隐私的免费临时邮箱，无需注册，即时使用，24小时有效，支持附件下载。",
-		},
-		{ property: "og:type", content: "website" },
+		{ title: "Smail - 临时邮箱" },
+		{ name: "description", content: "免费临时邮箱，自动接收邮件。" },
 		{ property: "og:url", content: "https://dookcss.xx.kg" },
-		{ property: "og:site_name", content: "Smail" },
-		{ property: "og:locale", content: "zh_CN" },
-		{ name: "twitter:card", content: "summary_large_image" },
-		{ name: "twitter:title", content: "Smail - 免费临时邮箱生成器" },
-		{ name: "twitter:description", content: "保护隐私的免费临时邮箱，无需注册，即时使用。" },
-		{ name: "robots", content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" },
-		{ name: "googlebot", content: "index, follow" },
-		{ name: "bingbot", content: "index, follow" },
-		{ name: "format-detection", content: "telephone=no" },
-		{ name: "theme-color", content: "#2563eb" },
-		{ name: "application-name", content: "Smail" },
-		{ name: "apple-mobile-web-app-title", content: "Smail" },
-		{ name: "msapplication-TileColor", content: "#2563eb" },
 	];
 }
 
@@ -121,7 +86,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	await new Promise((resolve) => setTimeout(resolve, 1000));
+	await new Promise((resolve) => setTimeout(resolve, 600));
 	const formData = await request.formData();
 	const action = formData.get("action");
 
@@ -176,184 +141,113 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 	const isAutoRefreshing = revalidator.state === "loading" && navigation.state === "idle";
 
 	return (
-				<div className="glass-theme">
+		<div className="glass-theme">
 			<main className="container mx-auto px-4 py-8">
-				<div className="max-w-6xl mx-auto">
-					<div className="text-center mb-12">
-												<h2 className="text-4xl font-bold text-white mb-4">保护您的隐私临时邮箱</h2>
-												<p className="text-lg text-glass max-w-2xl mx-auto">
-							无需注册，即时获取临时邮箱地址。24小时有效期，完全免费，保护您的真实邮箱免受垃圾邮件骚扰。
-						</p>
+				<div className="max-w-5xl mx-auto">
+					<div className="text-center mb-8">
+						<h2 className="text-3xl font-bold text-white mb-2">临时邮箱</h2>
+						<p className="text-glass">复制地址即可接收邮件，10 秒自动刷新</p>
 					</div>
 
-					<div className="grid lg:grid-cols-2 gap-8">
-						<div className="space-y-6">
-							<Card className="glass-card h-full text-white">
-								<CardHeader className="pb-4">
-									<CardTitle className="flex items-center space-x-2 text-xl">
-										<div className="bg-blue-600 rounded-lg p-2">
-											<Mail className="h-5 w-5 text-white" />
-										</div>
-										<span className="text-white">您的临时邮箱地址</span>
-									</CardTitle>
-									<div className="flex flex-wrap items-center gap-2 text-sm">
-										<span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">24小时有效</span>
-										<span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">自动刷新</span>
-										<span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">完全免费</span>
+					<div className="grid lg:grid-cols-2 gap-6">
+						<Card className="glass-card h-full text-white">
+							<CardHeader className="pb-4">
+								<CardTitle className="flex items-center space-x-2 text-lg">
+									<div className="bg-white/14 rounded-lg p-2 border border-white/20">
+										<Mail className="h-5 w-5 text-white" />
 									</div>
-								</CardHeader>
-								<CardContent>
-									<div className="glass-subtle rounded-lg p-4 mb-6">
-										<div className="text-center">
-											<p className="text-xs text-glass-soft mb-2 font-medium">您的专属邮箱地址</p>
-											<span className="font-mono text-base sm:text-lg font-bold text-white tracking-wide select-all break-all block">
-												{loaderData.email}
-											</span>
-										</div>
-									</div>
+									<span className="text-white">当前邮箱地址</span>
+								</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<div className="glass-subtle rounded-lg p-4 mb-4">
+									<span className="font-mono text-sm sm:text-base font-semibold text-white tracking-wide select-all break-all block">
+										{loaderData.email}
+									</span>
+								</div>
 
-									<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-										<CopyButton
-											text={loaderData.email}
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+									<CopyButton text={loaderData.email} size="default" variant="default" className="w-full h-10" />
+									<Form method="post" className="w-full">
+										<Button
+											variant="outline"
 											size="default"
-											variant="default"
-											className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white"
-										/>
-										<Form method="post" className="w-full">
-											<Button
-												variant="outline"
-												size="default"
-												type="submit"
-												name="action"
-												value="delete"
-												disabled={isDeleting}
-												className="w-full h-10 border-white/25 bg-white/5 text-white hover:bg-white/12"
-											>
-												{isDeleting ? (
-													<>
-														<Loader2Icon className="w-4 h-4 animate-spin mr-2" />
-														生成中...
-													</>
-												) : (
-													"生成新邮箱"
-												)}
-											</Button>
-										</Form>
-									</div>
+											type="submit"
+											name="action"
+											value="delete"
+											disabled={isDeleting}
+											className="w-full h-10"
+										>
+											{isDeleting ? (
+												<>
+													<Loader2Icon className="w-4 h-4 animate-spin mr-2" />
+													生成中...
+												</>
+											) : (
+												"生成新邮箱"
+											)}
+										</Button>
+									</Form>
+								</div>
 
-									<div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-										<div className="flex items-start gap-3">
-											<div className="bg-blue-600 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">
-												<InfoIcon className="w-4 h-4 text-white" />
-											</div>
-											<div className="text-sm">
-												<p className="font-semibold text-blue-800 mb-1">使用提示</p>
-												<p className="text-blue-700 leading-relaxed">
-													发送邮件到此地址即可在右侧收件箱查看，邮箱24小时后自动过期。收件箱每10秒自动刷新检查新邮件。
-												</p>
-											</div>
-										</div>
+								<div className="glass-subtle rounded-lg p-3 border border-white/15">
+									<div className="flex items-start gap-2 text-sm text-glass">
+										<InfoIcon className="w-4 h-4 mt-0.5 text-white/80" />
+										<p>邮箱 24 小时后自动过期，仅用于临时接收。</p>
 									</div>
-								</CardContent>
-							</Card>
-						</div>
+								</div>
+							</CardContent>
+						</Card>
 
-						<div>
-							<Card className="glass-card h-full text-white">
-								<CardHeader>
-									<div className="flex items-center justify-between">
-										<div className="flex items-center gap-2">
-											<CardTitle className="flex items-center space-x-2">
-												<InboxIcon className="w-4 h-4" />
-												<span>收件箱</span>
-											</CardTitle>
-											<span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
-												{loaderData.stats.unread} 未读
-											</span>
-											<span className="text-glass-soft text-xs">共 {loaderData.stats.total} 封</span>
+						<Card className="glass-card h-full text-white">
+							<CardHeader>
+								<div className="flex items-center justify-between gap-2">
+									<CardTitle className="flex items-center space-x-2 text-base">
+										<InboxIcon className="w-4 h-4" />
+										<span>收件箱</span>
+										<span className="text-xs text-white/60">{loaderData.stats.unread}/{loaderData.stats.total}</span>
+									</CardTitle>
+									<Form method="post">
+										<Button
+											variant="secondary"
+											size="sm"
+											name="action"
+											value="refresh"
+											disabled={isRefreshing || isAutoRefreshing}
+											className="text-xs"
+										>
+											{isRefreshing ? (
+												<>
+													<Loader2Icon className="w-3 h-3 animate-spin mr-1" />
+													刷新中
+												</>
+											) : (
+												<>
+													<RefreshCcwIcon className="w-3 h-3 mr-1" />
+													刷新
+												</>
+											)}
+										</Button>
+									</Form>
+								</div>
+							</CardHeader>
+							<CardContent className="p-0">
+								<ScrollArea className="h-96">
+									{loaderData.mails.length > 0 ? (
+										<div className="divide-y divide-white/10">
+											{loaderData.mails.map((mail) => (
+												<MailItem key={mail.id} {...mail} />
+											))}
 										</div>
-										<Form method="post">
-											<Button
-												variant="secondary"
-												size="sm"
-												name="action"
-												value="refresh"
-												disabled={isRefreshing || isAutoRefreshing}
-												className="text-xs"
-											>
-												{isRefreshing ? (
-													<>
-														<Loader2Icon className="w-3 h-3 animate-spin mr-1" />
-														刷新中...
-													</>
-												) : (
-													<>
-														<RefreshCcwIcon className="w-3 h-3 mr-1" />
-														手动刷新
-													</>
-												)}
-											</Button>
-										</Form>
-									</div>
-									{isAutoRefreshing && (
-										<div className="text-xs text-blue-600 flex items-center gap-1">
-											<Loader2Icon className="w-3 h-3 animate-spin" />
-											自动刷新中...
+									) : (
+										<div className="flex flex-col items-center justify-center py-12 text-glass px-4">
+											<InboxIcon className="w-10 h-10 mb-3 text-white/45" />
+											<p className="text-sm text-center">暂无邮件</p>
 										</div>
 									)}
-								</CardHeader>
-								<CardContent className="p-0">
-									<ScrollArea className="h-96">
-										{loaderData.mails.length > 0 ? (
-											<div className="divide-y">
-												{loaderData.mails.map((mail) => (
-													<MailItem key={mail.id} {...mail} />
-												))}
-											</div>
-										) : (
-											<div className="flex flex-col items-center justify-center py-12 text-glass px-4">
-												<InboxIcon className="w-10 h-10 mb-3 text-white/45" />
-												<h3 className="text-lg font-semibold mb-2 text-center">收件箱为空</h3>
-												<p className="text-sm text-center">您还没有收到任何邮件</p>
-												<p className="text-xs text-glass-soft mt-2 text-center break-all">
-													发送邮件到 {loaderData.email} 来测试
-												</p>
-											</div>
-										)}
-									</ScrollArea>
-								</CardContent>
-							</Card>
-						</div>
-					</div>
-
-					<div className="mt-16">
-						<div className="text-center mb-8">
-							<h3 className="text-2xl font-bold text-white mb-2">为什么选择 Smail？</h3>
-							<p className="text-glass">专业的临时邮箱服务，保护您的隐私安全</p>
-						</div>
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-							<Card className="glass-card text-center text-white">
-								<CardContent className="pt-6">
-									<ShieldCheckIcon className="w-9 h-9 mx-auto mb-4 text-blue-600" />
-									<h4 className="text-lg font-semibold mb-2">隐私保护</h4>
-									<p className="text-glass text-sm">保护您的真实邮箱地址，避免垃圾邮件和隐私泄露</p>
-								</CardContent>
-							</Card>
-							<Card className="glass-card text-center text-white">
-								<CardContent className="pt-6">
-									<ZapIcon className="w-9 h-9 mx-auto mb-4 text-blue-600" />
-									<h4 className="text-lg font-semibold mb-2">即时创建</h4>
-									<p className="text-glass text-sm">无需注册，一键生成临时邮箱地址，立即开始使用</p>
-								</CardContent>
-							</Card>
-							<Card className="glass-card text-center text-white">
-								<CardContent className="pt-6">
-									<Globe2Icon className="w-9 h-9 mx-auto mb-4 text-blue-600" />
-									<h4 className="text-lg font-semibold mb-2">完全免费</h4>
-									<p className="text-glass text-sm">永久免费使用，无隐藏费用，无广告干扰</p>
-								</CardContent>
-							</Card>
-						</div>
+								</ScrollArea>
+							</CardContent>
+						</Card>
 					</div>
 				</div>
 			</main>

@@ -1,15 +1,6 @@
-import { Outlet, useLocation } from "react-router";
-import { Navigation } from "~/components/Navigation";
-import { Footer } from "~/components/Footer";
+import { Outlet } from "react-router";
 
 export default function Layout() {
-	const location = useLocation();
-
-	return (
-		<>
-			<Navigation currentPath={location.pathname} />
-			<Outlet />
-			<Footer />
-		</>
-	);
+	return <Outlet />;
 }
+
