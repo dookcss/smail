@@ -40,7 +40,7 @@ export function MailItem({
 		<Link
 			to={`/mail/${id}`}
 			className={cn(
-				"block w-full rounded-xl border p-3 sm:p-4 transition-all overflow-hidden",
+				"block w-full max-w-full min-w-0 rounded-xl border p-3 sm:p-4 transition-all overflow-hidden",
 				"bg-white/7 border-white/14 hover:bg-white/12 hover:border-white/24",
 				!isRead && "bg-white/14 border-white/28",
 			)}
