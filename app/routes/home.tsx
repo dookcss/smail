@@ -1,7 +1,6 @@
 import randomName from "@scaleway/random-name";
 import {
 	InboxIcon,
-	InfoIcon,
 	Loader2Icon,
 	Mail,
 	RefreshCcwIcon,
@@ -208,12 +207,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 									</Form>
 								</div>
 
-								<div className="glass-subtle rounded-lg p-3 border border-white/15">
-									<div className="flex items-start gap-2 text-sm text-glass">
-										<InfoIcon className="w-4 h-4 mt-0.5 text-white/80" />
-										<p>邮箱 24 小时后自动过期，仅用于临时接收。</p>
-									</div>
-								</div>
 							</CardContent>
 						</Card>
 
