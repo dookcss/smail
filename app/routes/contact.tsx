@@ -209,10 +209,10 @@ export default function Contact({ loaderData }: ComponentProps) {
 											您也可以直接发送邮件给我们：
 										</p>
 										<a
-											href="mailto:support@smail.pw"
+											href="mailto:support@dookcss.xx.kg"
 											className="text-blue-600 font-medium hover:underline text-sm sm:text-base break-all"
 										>
-											support@smail.pw
+											support@dookcss.xx.kg
 										</a>
 									</CardContent>
 								</Card>

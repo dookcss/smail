@@ -8,7 +8,7 @@ import { promisify } from "node:util";
 
 const execAsync = promisify(exec);
 
-const toEmail = process.argv[2] || "test@smail.pw";
+const toEmail = process.argv[2] || "test@dookcss.xx.kg";
 const fromEmail = process.argv[3] || "sender@example.com";
 const port = process.argv[4] || "5173";
 const withAttachment = process.argv[5] === "true" || process.argv[5] === "1";

@@ -76,7 +76,7 @@ pnpm run test:email
 pnpm run test:email:custom [收件人] [发件人] [端口] [是否包含附件]
 
 # 例如：
-pnpm run test:email:custom mytest@smail.pw sender@example.com 5173 true
+pnpm run test:email:custom mytest@dookcss.xx.kg sender@example.com 5173 true
 ```
 
 ### 数据库管理
