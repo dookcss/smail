@@ -166,8 +166,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 						<p className="text-glass">复制地址即可接收邮件，10 秒自动刷新</p>
 					</div>
 
-					<div className="grid lg:grid-cols-2 gap-6">
-						<Card className="glass-card h-full text-white">
+					<div className="grid lg:grid-cols-2 gap-6 items-start">
+						<Card className="glass-card text-white self-start">
 							<CardHeader className="pb-4">
 								<CardTitle className="flex items-center space-x-2 text-lg">
 									<div className="bg-white/14 rounded-lg p-2 border border-white/20">
@@ -210,7 +210,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 							</CardContent>
 						</Card>
 
-						<Card className="glass-card h-full text-white">
+						<Card className="glass-card text-white self-start">
 							<CardHeader>
 								<div className="flex items-center justify-between gap-2">
 									<CardTitle className="flex items-center space-x-2 text-base">
