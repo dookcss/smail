@@ -28,8 +28,7 @@ function generateEmailHTML(email: {
 	receivedAt: Date;
 }) {
 	const content =
-		email.htmlContent || email.textContent?.replace(/
-/g, "<br>") || "";
+		email.htmlContent || email.textContent?.replaceAll(String.fromCharCode(10), "<br>") || "";
 
 	return `
 		<!DOCTYPE html>
