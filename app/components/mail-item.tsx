@@ -40,7 +40,7 @@ export function MailItem({
 		<Link
 			to={`/mail/${id}`}
 			className={cn(
-				"block w-full rounded-xl border p-3 sm:p-4 transition-all",
+				"block w-full rounded-xl border p-3 sm:p-4 transition-all overflow-hidden",
 				"bg-white/7 border-white/14 hover:bg-white/12 hover:border-white/24",
 				!isRead && "bg-white/14 border-white/28",
 			)}
@@ -53,8 +53,13 @@ export function MailItem({
 				</Avatar>
 
 				<div className="flex-1 min-w-0 space-y-1">
-					<div className="flex items-center justify-between gap-2">
-						<span className={cn("text-sm truncate text-white/92", !isRead && "font-semibold text-white")}>
+					<div className="flex items-center justify-between gap-2 min-w-0">
+						<span
+							className={cn(
+								"block min-w-0 flex-1 text-sm truncate text-white/92",
+								!isRead && "font-semibold text-white",
+							)}
+						>
 							{safeName}
 						</span>
 						<span className="text-[11px] sm:text-xs text-white/65 flex-shrink-0">
@@ -62,8 +67,13 @@ export function MailItem({
 						</span>
 					</div>
 
-					<div className="text-xs text-white/65 truncate">{email}</div>
-					<div className={cn("text-xs sm:text-sm truncate text-white/78", !isRead && "text-white/96 font-medium")}>
+					<div className="block min-w-0 text-xs text-white/65 truncate">{email}</div>
+					<div
+						className={cn(
+							"block min-w-0 text-xs sm:text-sm truncate text-white/78",
+							!isRead && "text-white/96 font-medium",
+						)}
+					>
 						{subject}
 					</div>
 				</div>

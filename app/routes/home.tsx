@@ -26,7 +26,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "~/components/ui/card";
-import { ScrollArea } from "~/components/ui/scroll-area";
+
 import {
 	createDB,
 	getEmailsByAddress,
@@ -242,21 +242,19 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 									</Form>
 								</div>
 							</CardHeader>
-							<CardContent className="p-0">
-								<ScrollArea className="h-96">
-									{loaderData.mails.length > 0 ? (
-									<div className="p-2 space-y-2">
+							<CardContent className="p-2 sm:p-3 max-h-96 overflow-y-auto overflow-x-hidden">
+								{loaderData.mails.length > 0 ? (
+									<div className="space-y-2">
 										{loaderData.mails.map((mail) => (
 											<MailItem key={mail.id} {...mail} />
 										))}
 									</div>
-									) : (
-										<div className="flex flex-col items-center justify-center py-12 text-glass px-4">
-											<InboxIcon className="w-10 h-10 mb-3 text-white/45" />
-											<p className="text-sm text-center">暂无邮件</p>
-										</div>
-									)}
-								</ScrollArea>
+								) : (
+									<div className="flex flex-col items-center justify-center py-12 text-glass px-4">
+										<InboxIcon className="w-10 h-10 mb-3 text-white/45" />
+										<p className="text-sm text-center">暂无邮件</p>
+									</div>
+								)}
 							</CardContent>
 						</Card>
 					</div>
