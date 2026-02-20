@@ -12,8 +12,8 @@ interface CopyButtonProps extends VariantProps<typeof buttonVariants> {
 export function CopyButton({ text, ...props }: CopyButtonProps) {
 	const icons = {
 		idle: <CopyIcon />,
-		success: <CheckIcon className="text-green-500" />,
-		error: <XIcon className="text-red-500" />,
+		success: <CheckIcon className="text-emerald-300" />,
+		error: <XIcon className="text-rose-300" />,
 	};
 	const texts = {
 		idle: "复制地址",

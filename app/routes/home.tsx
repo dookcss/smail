@@ -176,25 +176,25 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 	const isAutoRefreshing = revalidator.state === "loading" && navigation.state === "idle";
 
 	return (
-		<div className="min-h-screen bg-slate-50">
+				<div className="glass-theme">
 			<main className="container mx-auto px-4 py-8">
 				<div className="max-w-6xl mx-auto">
 					<div className="text-center mb-12">
-						<h2 className="text-4xl font-bold text-slate-800 mb-4">保护您的隐私临时邮箱</h2>
-						<p className="text-lg text-slate-600 max-w-2xl mx-auto">
+												<h2 className="text-4xl font-bold text-white mb-4">保护您的隐私临时邮箱</h2>
+												<p className="text-lg text-glass max-w-2xl mx-auto">
 							无需注册，即时获取临时邮箱地址。24小时有效期，完全免费，保护您的真实邮箱免受垃圾邮件骚扰。
 						</p>
 					</div>
 
 					<div className="grid lg:grid-cols-2 gap-8">
 						<div className="space-y-6">
-							<Card className="border border-slate-200 shadow-sm bg-white h-full">
+							<Card className="glass-card h-full text-white">
 								<CardHeader className="pb-4">
 									<CardTitle className="flex items-center space-x-2 text-xl">
 										<div className="bg-blue-600 rounded-lg p-2">
 											<Mail className="h-5 w-5 text-white" />
 										</div>
-										<span className="text-slate-800">您的临时邮箱地址</span>
+										<span className="text-white">您的临时邮箱地址</span>
 									</CardTitle>
 									<div className="flex flex-wrap items-center gap-2 text-sm">
 										<span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">24小时有效</span>
@@ -203,10 +203,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 									</div>
 								</CardHeader>
 								<CardContent>
-									<div className="bg-slate-50 rounded-lg p-4 border border-slate-200 mb-6">
+									<div className="glass-subtle rounded-lg p-4 mb-6">
 										<div className="text-center">
-											<p className="text-xs text-slate-500 mb-2 font-medium">您的专属邮箱地址</p>
-											<span className="font-mono text-base sm:text-lg font-bold text-slate-900 tracking-wide select-all break-all block">
+											<p className="text-xs text-glass-soft mb-2 font-medium">您的专属邮箱地址</p>
+											<span className="font-mono text-base sm:text-lg font-bold text-white tracking-wide select-all break-all block">
 												{loaderData.email}
 											</span>
 										</div>
@@ -227,7 +227,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 												name="action"
 												value="delete"
 												disabled={isDeleting}
-												className="w-full h-10 border-slate-300 hover:bg-slate-50"
+												className="w-full h-10 border-white/25 bg-white/5 text-white hover:bg-white/12"
 											>
 												{isDeleting ? (
 													<>
@@ -259,7 +259,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 						</div>
 
 						<div>
-							<Card className="h-full border border-slate-200 shadow-sm">
+							<Card className="glass-card h-full text-white">
 								<CardHeader>
 									<div className="flex items-center justify-between">
 										<div className="flex items-center gap-2">
@@ -270,7 +270,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 											<span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
 												{loaderData.stats.unread} 未读
 											</span>
-											<span className="text-slate-500 text-xs">共 {loaderData.stats.total} 封</span>
+											<span className="text-glass-soft text-xs">共 {loaderData.stats.total} 封</span>
 										</div>
 										<Form method="post">
 											<Button
@@ -311,11 +311,11 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 												))}
 											</div>
 										) : (
-											<div className="flex flex-col items-center justify-center py-12 text-slate-500 px-4">
-												<InboxIcon className="w-10 h-10 mb-3 text-slate-400" />
+											<div className="flex flex-col items-center justify-center py-12 text-glass px-4">
+												<InboxIcon className="w-10 h-10 mb-3 text-white/45" />
 												<h3 className="text-lg font-semibold mb-2 text-center">收件箱为空</h3>
 												<p className="text-sm text-center">您还没有收到任何邮件</p>
-												<p className="text-xs text-slate-400 mt-2 text-center break-all">
+												<p className="text-xs text-glass-soft mt-2 text-center break-all">
 													发送邮件到 {loaderData.email} 来测试
 												</p>
 											</div>
@@ -328,29 +328,29 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
 					<div className="mt-16">
 						<div className="text-center mb-8">
-							<h3 className="text-2xl font-bold text-slate-800 mb-2">为什么选择 Smail？</h3>
-							<p className="text-slate-600">专业的临时邮箱服务，保护您的隐私安全</p>
+							<h3 className="text-2xl font-bold text-white mb-2">为什么选择 Smail？</h3>
+							<p className="text-glass">专业的临时邮箱服务，保护您的隐私安全</p>
 						</div>
 						<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-							<Card className="text-center border border-slate-200">
+							<Card className="glass-card text-center text-white">
 								<CardContent className="pt-6">
 									<ShieldCheckIcon className="w-9 h-9 mx-auto mb-4 text-blue-600" />
 									<h4 className="text-lg font-semibold mb-2">隐私保护</h4>
-									<p className="text-slate-600 text-sm">保护您的真实邮箱地址，避免垃圾邮件和隐私泄露</p>
+									<p className="text-glass text-sm">保护您的真实邮箱地址，避免垃圾邮件和隐私泄露</p>
 								</CardContent>
 							</Card>
-							<Card className="text-center border border-slate-200">
+							<Card className="glass-card text-center text-white">
 								<CardContent className="pt-6">
 									<ZapIcon className="w-9 h-9 mx-auto mb-4 text-blue-600" />
 									<h4 className="text-lg font-semibold mb-2">即时创建</h4>
-									<p className="text-slate-600 text-sm">无需注册，一键生成临时邮箱地址，立即开始使用</p>
+									<p className="text-glass text-sm">无需注册，一键生成临时邮箱地址，立即开始使用</p>
 								</CardContent>
 							</Card>
-							<Card className="text-center border border-slate-200">
+							<Card className="glass-card text-center text-white">
 								<CardContent className="pt-6">
 									<Globe2Icon className="w-9 h-9 mx-auto mb-4 text-blue-600" />
 									<h4 className="text-lg font-semibold mb-2">完全免费</h4>
-									<p className="text-slate-600 text-sm">永久免费使用，无隐藏费用，无广告干扰</p>
+									<p className="text-glass text-sm">永久免费使用，无隐藏费用，无广告干扰</p>
 								</CardContent>
 							</Card>
 						</div>

@@ -40,13 +40,13 @@ export function MailItem({
 			size="sm"
 			className={cn(
 				"h-16 sm:h-20 w-full rounded-none justify-start gap-3 sm:gap-4 relative p-3 sm:p-4",
-				isRead ? "opacity-80" : "bg-blue-50 hover:bg-blue-100",
+				isRead ? "opacity-90 hover:bg-white/8" : "bg-white/16 hover:bg-white/22",
 			)}
 			variant="ghost"
 		>
 			<Link to={`/mail/${id}`}>
 				{!isRead && (
-					<div className="absolute left-2 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-blue-600 rounded-full" />
+					<div className="absolute left-2 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-white rounded-full" />
 				)}
 				<Avatar className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10">
 					<AvatarImage src={`https://unavatar.io/${domain}`} />
@@ -64,15 +64,15 @@ export function MailItem({
 						>
 							{name}
 						</span>
-						<span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
+						<span className="text-xs text-white/65 flex-shrink-0 ml-2">
 							{formatDate(date)}
 						</span>
 					</div>
-					<div className="text-xs text-muted-foreground truncate">{email}</div>
+					<div className="text-xs text-white/65 truncate">{email}</div>
 					<div
 						className={cn(
 							"text-xs sm:text-sm truncate",
-							isRead ? "text-muted-foreground" : "text-gray-900 font-medium",
+							isRead ? "text-white/72" : "text-white font-medium",
 						)}
 					>
 						{subject}
