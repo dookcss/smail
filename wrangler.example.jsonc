@@ -35,5 +35,9 @@
 	],
 	"assets": {
 		"directory": "./build/client"
+	},
+	"vars": {
+		"MAIL_DOMAIN": "__MAIL_DOMAIN__",
+		"SITE_URL": "__SITE_URL__"
 	}
 }

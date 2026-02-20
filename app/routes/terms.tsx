@@ -9,7 +9,16 @@ import {
 	CardTitle,
 } from "~/components/ui/card";
 
+import { getPublicRuntimeConfig } from "~/lib/runtime-config";
+
 import type { Route } from "./+types/terms";
+
+
+export async function loader({ request }: Route.LoaderArgs) {
+	const { env } = await import("cloudflare:workers");
+	const runtimeConfig = getPublicRuntimeConfig(env, request.url);
+	return { legalEmail: runtimeConfig.legalEmail };
+}
 
 export function meta(_: Route.MetaArgs) {
 	return [
@@ -22,7 +31,9 @@ export function meta(_: Route.MetaArgs) {
 	];
 }
 
-export default function Terms() {
+export default function Terms({ loaderData }: Route.ComponentProps) {
+	const { legalEmail } = loaderData;
+
 	return (
 		<div className="min-h-dvh bg-gray-50">
 			{/* Header */}
@@ -316,7 +327,7 @@ export default function Terms() {
 									如果您对本服务条款有任何问题，请通过以下方式联系我们：
 								</p>
 								<ul className="list-disc pl-6 space-y-1 text-gray-600">
-									<li>邮箱：legal@dookcss.xx.kg</li>
+									<li>邮箱：{legalEmail}</li>
 									<li>
 										联系表单：通过我们的
 										<Link

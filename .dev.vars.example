@@ -4,3 +4,10 @@
 # Session 密钥 - 用于用户会话加密
 # 使用以下命令生成：openssl rand -base64 32
 SESSION_SECRET=your_session_secret_here_use_openssl_rand_base64_32_to_generate 
+
+# 邮箱后缀域名（例如 dookcss.xx.kg）
+MAIL_DOMAIN=example.com
+
+# 站点访问地址（用于 SEO canonical / og:url）
+SITE_URL=https://mail.example.com
+

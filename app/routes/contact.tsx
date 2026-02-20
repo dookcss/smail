@@ -9,6 +9,8 @@ import {
 	CardTitle,
 } from "~/components/ui/card";
 
+import { getPublicRuntimeConfig } from "~/lib/runtime-config";
+
 import type { Route } from "./+types/contact";
 
 export function meta(_: Route.MetaArgs) {
@@ -42,12 +44,19 @@ export async function action({ request }: Route.ActionArgs) {
 export async function loader({ request }: Route.LoaderArgs) {
 	const url = new URL(request.url);
 	const success = url.searchParams.get("success");
+	const { env } = await import("cloudflare:workers");
+	const runtimeConfig = getPublicRuntimeConfig(env, request.url);
 
-	return data({ success: success === "true" });
+	return data({
+		success: success === "true",
+		supportEmail: runtimeConfig.supportEmail,
+	});
 }
+
 
 interface LoaderData {
 	success: boolean;
+	supportEmail: string;
 }
 
 interface ComponentProps {
@@ -55,8 +64,10 @@ interface ComponentProps {
 }
 
 export default function Contact({ loaderData }: ComponentProps) {
-	const { success } = loaderData || { success: false };
-
+	const { success, supportEmail } = loaderData || {
+		success: false,
+		supportEmail: "support@example.com",
+	};
 	return (
 		<div className="min-h-screen bg-slate-50">
 			{/* Hero Section */}
@@ -209,10 +220,10 @@ export default function Contact({ loaderData }: ComponentProps) {
 											您也可以直接发送邮件给我们：
 										</p>
 										<a
-											href="mailto:support@dookcss.xx.kg"
+											href={`mailto:${supportEmail}`}
 											className="text-blue-600 font-medium hover:underline text-sm sm:text-base break-all"
 										>
-											support@dookcss.xx.kg
+											{supportEmail}
 										</a>
 									</CardContent>
 								</Card>

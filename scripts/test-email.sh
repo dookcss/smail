@@ -3,7 +3,8 @@
 # 测试邮件接收功能的脚本
 # 使用方法: ./scripts/test-email.sh [to_email] [from_email]
 
-TO_EMAIL=${1:-"test@dookcss.xx.kg"}
+MAIL_DOMAIN=${MAIL_DOMAIN:-"example.com"}
+TO_EMAIL=${1:-"test@${MAIL_DOMAIN}"}
 FROM_EMAIL=${2:-"sender@example.com"}
 PORT=${3:-5173}
 

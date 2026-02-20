@@ -229,3 +229,29 @@ pnpm wrangler versions deploy
 > 如果你的默认分支不是 `main`，请修改 `.github/workflows/deploy-cf.yml` 中的分支名。
 > 如果你使用的是不同的数据库名，请同步调整 `package.json` 里的 `db:migrate:remote` 脚本。
 
+
+## 🌐 域名配置（避免代码写死）
+
+项目已支持通过配置读取域名信息（类似密钥配置方式）：
+
+- `MAIL_DOMAIN`：用于生成临时邮箱后缀（例如 `dookcss.xx.kg`）
+- `SITE_URL`：用于 SEO canonical / og:url（例如 `https://mail.dookcss.xx.kg`）
+
+### 本地开发
+
+在 `.dev.vars` 中配置：
+
+```bash
+MAIL_DOMAIN=dookcss.xx.kg
+SITE_URL=https://mail.dookcss.xx.kg
+```
+
+### GitHub Actions 自动部署
+
+在仓库 `Settings -> Secrets and variables -> Actions -> Variables` 中添加：
+
+- `CF_MAIL_DOMAIN`
+- `CF_SITE_URL`
+
+工作流会自动将它们注入 `wrangler.jsonc` 中的 `vars`，无需改代码。
+

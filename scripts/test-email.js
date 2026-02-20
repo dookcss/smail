@@ -8,7 +8,8 @@ import { promisify } from "node:util";
 
 const execAsync = promisify(exec);
 
-const toEmail = process.argv[2] || "test@dookcss.xx.kg";
+const defaultMailDomain = process.env.MAIL_DOMAIN || "example.com";
+const toEmail = process.argv[2] || `test@${defaultMailDomain}`;
 const fromEmail = process.argv[3] || "sender@example.com";
 const port = process.argv[4] || "5173";
 const withAttachment = process.argv[5] === "true" || process.argv[5] === "1";

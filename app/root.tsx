@@ -4,13 +4,26 @@ import {
 	Outlet,
 	Scripts,
 	ScrollRestoration,
+	data,
 	isRouteErrorResponse,
+	useRouteLoaderData,
 } from "react-router";
+
+import { getPublicRuntimeConfig } from "~/lib/runtime-config";
 
 import type { Route } from "./+types/root";
 import "./app.css";
 
-// 全局默认 meta 配置
+interface RootLoaderData {
+	siteUrl: string;
+}
+
+export async function loader({ request }: Route.LoaderArgs) {
+	const { env } = await import("cloudflare:workers");
+	const runtimeConfig = getPublicRuntimeConfig(env, request.url);
+	return data<RootLoaderData>({ siteUrl: runtimeConfig.siteUrl });
+}
+
 export function meta() {
 	return [
 		{
@@ -30,8 +43,6 @@ export function meta() {
 		{ name: "author", content: "Smail Team" },
 		{ name: "robots", content: "index, follow" },
 		{ name: "googlebot", content: "index, follow" },
-
-		// Open Graph 标签
 		{ property: "og:type", content: "website" },
 		{
 			property: "og:title",
@@ -43,8 +54,6 @@ export function meta() {
 		},
 		{ property: "og:site_name", content: "Smail" },
 		{ property: "og:locale", content: "zh_CN" },
-
-		// Twitter Card
 		{ name: "twitter:card", content: "summary_large_image" },
 		{
 			name: "twitter:title",
@@ -54,8 +63,6 @@ export function meta() {
 			name: "twitter:description",
 			content: "保护隐私的免费临时邮箱服务，无需注册，即时使用。",
 		},
-
-		// 移动端优化
 		{ name: "format-detection", content: "telephone=no" },
 		{ name: "mobile-web-app-capable", content: "yes" },
 		{ name: "apple-mobile-web-app-capable", content: "yes" },
@@ -65,7 +72,6 @@ export function meta() {
 }
 
 export const links: Route.LinksFunction = () => [
-	// 字体预加载优化
 	{ rel: "preconnect", href: "https://fonts.googleapis.com" },
 	{
 		rel: "preconnect",
@@ -81,8 +87,6 @@ export const links: Route.LinksFunction = () => [
 		rel: "stylesheet",
 		href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
 	},
-
-	// Favicon and App Icons
 	{ rel: "icon", type: "image/x-icon", href: "/favicon.ico" },
 	{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
 	{
@@ -99,20 +103,18 @@ export const links: Route.LinksFunction = () => [
 	},
 	{ rel: "apple-touch-icon", sizes: "192x192", href: "/icon-192.png" },
 	{ rel: "manifest", href: "/site.webmanifest" },
-
-	// SEO 相关
-	{ rel: "canonical", href: "https://dookcss.xx.kg" },
-	{ rel: "alternate", hrefLang: "zh-CN", href: "https://dookcss.xx.kg" },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
-	// 结构化数据 JSON
+	const rootData = useRouteLoaderData<RootLoaderData>("root");
+	const siteUrl = rootData?.siteUrl;
+
 	const structuredData = {
 		"@context": "https://schema.org",
 		"@type": "WebApplication",
 		name: "Smail",
 		description: "免费临时邮箱服务，保护隐私，避免垃圾邮件",
-		url: "https://dookcss.xx.kg",
+		url: siteUrl,
 		applicationCategory: "UtilityApplication",
 		operatingSystem: "Any",
 		offers: {
@@ -146,16 +148,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
 				/>
 				<Meta />
 				<Links />
-
-				{/* JSON-LD 结构化数据 */}
+				{siteUrl ? <link rel="canonical" href={siteUrl} /> : null}
+				{siteUrl ? <meta property="og:url" content={siteUrl} /> : null}
 				<script
 					type="application/ld+json"
 					dangerouslySetInnerHTML={{
 						__html: JSON.stringify(structuredData),
 					}}
 				/>
-
-				{/* 统计脚本 */}
 				<script
 					defer
 					src="https://u.pexni.com/script.js"
@@ -203,3 +203,4 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 		</main>
 	);
 }
+

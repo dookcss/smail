@@ -16,6 +16,7 @@ import {
 	useRevalidator,
 } from "react-router";
 
+
 import { commitSession, getSession } from "~/.server/session";
 import { CopyButton } from "~/components/copy-button";
 import { MailItem } from "~/components/mail-item";
@@ -33,35 +34,45 @@ import {
 	getMailboxStats,
 	getOrCreateMailbox,
 } from "~/lib/db";
+import { getPublicRuntimeConfig } from "~/lib/runtime-config";
+
 
 import type { Route } from "./+types/home";
 
-export function meta(_: Route.MetaArgs) {
+export function meta({ data }: Route.MetaArgs) {
 	return [
 		{ title: "Smail - 临时邮箱" },
 		{ name: "description", content: "免费临时邮箱，自动接收邮件。" },
-		{ property: "og:url", content: "https://dookcss.xx.kg" },
+		...(data?.siteUrl ? [{ property: "og:url", content: data.siteUrl }] : []),
 	];
 }
 
-function generateEmail() {
+async function resolveRuntimeConfig(requestUrl?: string) {
+	const { env } = await import("cloudflare:workers");
+	return getPublicRuntimeConfig(env, requestUrl);
+}
+
+function generateEmail(mailDomain: string) {
 	const name = randomName();
 	const random = customAlphabet("0123456789", 4)();
-	return `${name}-${random}@dookcss.xx.kg`;
+	return `${name}-${random}@${mailDomain}`;
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
+	const runtimeConfig = await resolveRuntimeConfig(request.url);
 	const session = await getSession(request.headers.get("Cookie"));
 	let email = session.get("email");
 
 	if (!email) {
-		email = generateEmail();
+		email = generateEmail(runtimeConfig.mailDomain);
 		session.set("email", email);
 		return data(
-			{ email, mails: [], stats: { total: 0, unread: 0 } },
+			{ email, mails: [], stats: { total: 0, unread: 0 }, siteUrl: runtimeConfig.siteUrl },
 			{ headers: { "Set-Cookie": await commitSession(session) } },
 		);
 	}
+
+
 
 	try {
 		const db = createDB();
@@ -78,14 +89,20 @@ export async function loader({ request }: Route.LoaderArgs) {
 			isRead: emailRecord.isRead,
 		}));
 
-		return { email, mails, stats };
+		return { email, mails, stats, siteUrl: runtimeConfig.siteUrl };
 	} catch (error) {
 		console.error("Error loading emails:", error);
-		return { email, mails: [], stats: { total: 0, unread: 0 } };
+		return {
+			email,
+			mails: [],
+			stats: { total: 0, unread: 0 },
+			siteUrl: runtimeConfig.siteUrl,
+		};
 	}
 }
 
 export async function action({ request }: Route.ActionArgs) {
+	const runtimeConfig = await resolveRuntimeConfig(request.url);
 	await new Promise((resolve) => setTimeout(resolve, 600));
 	const formData = await request.formData();
 	const action = formData.get("action");
@@ -96,8 +113,9 @@ export async function action({ request }: Route.ActionArgs) {
 
 	if (action === "delete") {
 		const session = await getSession(request.headers.get("Cookie"));
-		session.set("email", generateEmail());
+		session.set("email", generateEmail(runtimeConfig.mailDomain));
 		return redirect("/", {
+
 			headers: {
 				"Set-Cookie": await commitSession(session),
 			},

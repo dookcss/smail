@@ -25,6 +25,9 @@ jobs:
       CF_D1_DATABASE_NAME: ${{ vars.CF_D1_DATABASE_NAME }}
       CF_R2_BUCKET_NAME: ${{ vars.CF_R2_BUCKET_NAME }}
       CF_R2_PREVIEW_BUCKET_NAME: ${{ vars.CF_R2_PREVIEW_BUCKET_NAME }}
+      CF_MAIL_DOMAIN: ${{ vars.CF_MAIL_DOMAIN }}
+      CF_SITE_URL: ${{ vars.CF_SITE_URL }}
+
 
     steps:
       - name: Checkout
@@ -62,6 +65,9 @@ jobs:
           D1_NAME="${CF_D1_DATABASE_NAME:-smail-database}"
           R2_BUCKET_NAME="${CF_R2_BUCKET_NAME:-smail-attachments}"
           R2_PREVIEW_BUCKET_NAME="${CF_R2_PREVIEW_BUCKET_NAME:-smail-attachments-preview}"
+          MAIL_DOMAIN="${CF_MAIL_DOMAIN:-example.com}"
+          SITE_URL="${CF_SITE_URL:-https://mail.example.com}"
+
           CF_API_ROOT="https://api.cloudflare.com/client/v4"
           CF_API_BASE="${CF_API_ROOT}/accounts/${CLOUDFLARE_ACCOUNT_ID}"
 
@@ -198,11 +204,14 @@ jobs:
           fi
 
           {
+          {
             echo "KV_ID=$KV_ID"
             echo "D1_ID=$D1_ID"
             echo "D1_NAME=$D1_NAME"
             echo "R2_BUCKET_NAME=$R2_BUCKET_NAME"
             echo "R2_PREVIEW_BUCKET_NAME=$R2_PREVIEW_BUCKET_NAME"
+            echo "MAIL_DOMAIN=$MAIL_DOMAIN"
+            echo "SITE_URL=$SITE_URL"
           } >> "$GITHUB_ENV"
 
       - name: Generate wrangler.jsonc from template
@@ -210,6 +219,9 @@ jobs:
           cp wrangler.example.jsonc wrangler.jsonc
           sed -i "s|YOUR_KV_NAMESPACE_ID_HERE|${KV_ID}|g" wrangler.jsonc
           sed -i "s|YOUR_D1_DATABASE_ID_HERE|${D1_ID}|g" wrangler.jsonc
+          sed -i "s|__MAIL_DOMAIN__|${MAIL_DOMAIN}|g" wrangler.jsonc
+          sed -i "s|__SITE_URL__|${SITE_URL}|g" wrangler.jsonc
+
 
       - name: Run typecheck
         run: pnpm run typecheck
@@ -228,6 +240,9 @@ jobs:
         if: always()
         run: |
           echo "KV namespace id: ${KV_ID:-unknown}"
+          echo "MAIL_DOMAIN: ${MAIL_DOMAIN:-unknown}"
+          echo "SITE_URL: ${SITE_URL:-unknown}"
+
           echo "D1 database id: ${D1_ID:-unknown}"
           echo "D1 database name: ${D1_NAME:-unknown}"
           echo "R2 bucket: ${R2_BUCKET_NAME:-unknown}"
