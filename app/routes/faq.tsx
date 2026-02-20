@@ -87,7 +87,7 @@ export default function FAQ() {
 	];
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-blue-50">
+		<div className="min-h-screen bg-slate-50">
 			{/* Hero Section */}
 			<section className="py-8 sm:py-16 bg-white">
 				<div className="max-w-screen-xl mx-auto px-3 sm:px-4 text-center">
@@ -97,7 +97,7 @@ export default function FAQ() {
 						</div>
 					</div>
 					<h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-3 sm:mb-4">
-						<span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+						<span className="text-blue-600">
 							常见问题
 						</span>
 					</h1>

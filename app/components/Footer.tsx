@@ -6,16 +6,13 @@ export function Footer() {
 		<footer className="bg-gray-900 text-white">
 			<div className="container mx-auto px-4 py-12">
 				<div className="grid md:grid-cols-4 gap-8">
-					{/* 品牌信息 */}
 					<div className="col-span-1 md:col-span-2">
 						<div className="flex items-center space-x-3 mb-4">
-							<div className="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg p-2">
+							<div className="bg-blue-600 rounded-lg p-2">
 								<Mail className="h-6 w-6 text-white" />
 							</div>
 							<div>
-								<h3 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-									Smail
-								</h3>
+								<h3 className="text-xl font-bold text-blue-400">Smail</h3>
 								<p className="text-sm text-gray-400">临时邮箱服务</p>
 							</div>
 						</div>
@@ -57,70 +54,47 @@ export function Footer() {
 						</div>
 					</div>
 
-					{/* 快速链接 */}
 					<div>
 						<h4 className="text-lg font-semibold mb-4">快速链接</h4>
 						<ul className="space-y-2">
 							<li>
-								<Link
-									to="/"
-									className="text-gray-300 hover:text-blue-400 transition-colors"
-								>
+								<Link to="/" className="text-gray-300 hover:text-blue-400 transition-colors">
 									首页
 								</Link>
 							</li>
 							<li>
-								<Link
-									to="/about"
-									className="text-gray-300 hover:text-blue-400 transition-colors"
-								>
+								<Link to="/about" className="text-gray-300 hover:text-blue-400 transition-colors">
 									关于我们
 								</Link>
 							</li>
 							<li>
-								<Link
-									to="/faq"
-									className="text-gray-300 hover:text-blue-400 transition-colors"
-								>
+								<Link to="/faq" className="text-gray-300 hover:text-blue-400 transition-colors">
 									常见问题
 								</Link>
 							</li>
 							<li>
-								<Link
-									to="/terms"
-									className="text-gray-300 hover:text-blue-400 transition-colors"
-								>
+								<Link to="/terms" className="text-gray-300 hover:text-blue-400 transition-colors">
 									使用条款
 								</Link>
 							</li>
 						</ul>
 					</div>
 
-					{/* 联系我们 */}
 					<div>
 						<h4 className="text-lg font-semibold mb-4">帮助支持</h4>
 						<ul className="space-y-2">
 							<li>
-								<Link
-									to="/contact"
-									className="text-gray-300 hover:text-blue-400 transition-colors"
-								>
+								<Link to="/contact" className="text-gray-300 hover:text-blue-400 transition-colors">
 									联系我们
 								</Link>
 							</li>
 							<li>
-								<Link
-									to="/privacy"
-									className="text-gray-300 hover:text-blue-400 transition-colors"
-								>
+								<Link to="/privacy" className="text-gray-300 hover:text-blue-400 transition-colors">
 									隐私政策
 								</Link>
 							</li>
 							<li>
-								<Link
-									to="/faq"
-									className="text-gray-300 hover:text-blue-400 transition-colors"
-								>
+								<Link to="/faq" className="text-gray-300 hover:text-blue-400 transition-colors">
 									使用帮助
 								</Link>
 							</li>
@@ -128,12 +102,9 @@ export function Footer() {
 					</div>
 				</div>
 
-				{/* 分割线 */}
 				<div className="border-t border-gray-800 mt-8 pt-8">
 					<div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-						<div className="text-sm text-gray-400">
-							© 2024 Smail. 保留所有权利.
-						</div>
+						<div className="text-sm text-gray-400">© 2024 Smail. 保留所有权利.</div>
 						<div className="flex space-x-6 text-sm text-gray-400">
 							<span className="text-gray-500">免费 · 安全 · 隐私保护</span>
 						</div>
@@ -143,3 +114,4 @@ export function Footer() {
 		</footer>
 	);
 }
+

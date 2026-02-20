@@ -1,5 +1,13 @@
 import { env } from "cloudflare:workers";
-import { and, count, desc, eq, gt, lte } from "drizzle-orm";
+import {
+	and,
+	count,
+	desc,
+	eq,
+	gt,
+	inArray,
+	lte,
+} from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { nanoid } from "nanoid";
 import {
@@ -14,32 +22,33 @@ import {
 	mailboxes,
 } from "~/db/schema";
 
-// 创建 drizzle 实例
 export function createDB() {
 	return drizzle(env.DB, { schema: { mailboxes, emails, attachments } });
 }
 
-// 通过邮箱地址获取或创建邮箱
-export async function getOrCreateMailbox(
+export async function getActiveMailboxByEmail(
 	db: ReturnType<typeof createDB>,
 	email: string,
-): Promise<Mailbox> {
+): Promise<Mailbox | null> {
 	const now = new Date();
-
-	// 先查找现有邮箱
-	const existing = await db
+	const result = await db
 		.select()
 		.from(mailboxes)
 		.where(and(eq(mailboxes.email, email), gt(mailboxes.expiresAt, now)))
 		.limit(1);
 
-	if (existing.length > 0) {
-		return existing[0];
-	}
+	return result[0] ?? null;
+}
 
-	// 创建新邮箱（24小时过期）
-	const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24小时后过期
+export async function getOrCreateMailbox(
+	db: ReturnType<typeof createDB>,
+	email: string,
+): Promise<Mailbox> {
+	const now = new Date();
+	const existing = await getActiveMailboxByEmail(db, email);
+	if (existing) return existing;
 
+	const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 	const newMailbox: NewMailbox = {
 		id: nanoid(),
 		email,
@@ -55,13 +64,12 @@ export async function getOrCreateMailbox(
 	} as Mailbox;
 }
 
-// 获取邮箱的邮件列表
 export async function getEmailsByMailbox(
 	db: ReturnType<typeof createDB>,
 	mailboxId: string,
 	limit = 50,
 ): Promise<Email[]> {
-	return await db
+	return db
 		.select()
 		.from(emails)
 		.where(eq(emails.mailboxId, mailboxId))
@@ -69,15 +77,13 @@ export async function getEmailsByMailbox(
 		.limit(limit);
 }
 
-// 通过邮箱地址获取邮件列表
 export async function getEmailsByAddress(
 	db: ReturnType<typeof createDB>,
 	email: string,
 	limit = 50,
 ): Promise<Email[]> {
 	const now = new Date();
-
-	return await db
+	return db
 		.select({
 			id: emails.id,
 			mailboxId: emails.mailboxId,
@@ -99,7 +105,6 @@ export async function getEmailsByAddress(
 		.limit(limit);
 }
 
-// 获取单个邮件详情
 export async function getEmailById(
 	db: ReturnType<typeof createDB>,
 	emailId: string,
@@ -109,23 +114,60 @@ export async function getEmailById(
 		.from(emails)
 		.where(eq(emails.id, emailId))
 		.limit(1);
-
-	return result.length > 0 ? result[0] : null;
+	return result[0] ?? null;
 }
 
-// 获取邮件的附件列表
+export async function getEmailByIdForMailbox(
+	db: ReturnType<typeof createDB>,
+	emailId: string,
+	mailboxId: string,
+): Promise<Email | null> {
+	const result = await db
+		.select()
+		.from(emails)
+		.where(and(eq(emails.id, emailId), eq(emails.mailboxId, mailboxId)))
+		.limit(1);
+	return result[0] ?? null;
+}
+
 export async function getEmailAttachments(
 	db: ReturnType<typeof createDB>,
 	emailId: string,
 ): Promise<Attachment[]> {
-	return await db
+	return db
 		.select()
 		.from(attachments)
 		.where(eq(attachments.emailId, emailId))
 		.orderBy(attachments.createdAt);
 }
 
-// 标记邮件为已读
+export async function getAttachmentRecordByIdForMailbox(
+	db: ReturnType<typeof createDB>,
+	attachmentId: string,
+	mailboxId: string,
+): Promise<Attachment | null> {
+	const result = await db
+		.select({
+			id: attachments.id,
+			emailId: attachments.emailId,
+			filename: attachments.filename,
+			contentType: attachments.contentType,
+			size: attachments.size,
+			contentId: attachments.contentId,
+			isInline: attachments.isInline,
+			r2Key: attachments.r2Key,
+			r2Bucket: attachments.r2Bucket,
+			uploadStatus: attachments.uploadStatus,
+			createdAt: attachments.createdAt,
+		})
+		.from(attachments)
+		.innerJoin(emails, eq(attachments.emailId, emails.id))
+		.where(and(eq(attachments.id, attachmentId), eq(emails.mailboxId, mailboxId)))
+		.limit(1);
+
+	return result[0] ?? null;
+}
+
 export async function markEmailAsRead(
 	db: ReturnType<typeof createDB>,
 	emailId: string,
@@ -133,25 +175,64 @@ export async function markEmailAsRead(
 	await db.update(emails).set({ isRead: true }).where(eq(emails.id, emailId));
 }
 
-// 删除邮件
 export async function deleteEmail(
 	db: ReturnType<typeof createDB>,
+	r2: R2Bucket,
 	emailId: string,
 ): Promise<void> {
+	const emailAttachments = await getEmailAttachments(db, emailId);
+	const r2Keys = emailAttachments
+		.map((item) => item.r2Key)
+		.filter((key): key is string => Boolean(key));
+
+	if (r2Keys.length > 0) {
+		await Promise.allSettled(r2Keys.map((key) => r2.delete(key)));
+	}
+
+	await db.delete(attachments).where(eq(attachments.emailId, emailId));
 	await db.delete(emails).where(eq(emails.id, emailId));
 }
 
-// 清理过期邮箱和邮件
 export async function cleanupExpiredEmails(
 	db: ReturnType<typeof createDB>,
 ): Promise<void> {
 	const now = new Date();
+	const expiredMailboxes = await db
+		.select({ id: mailboxes.id })
+		.from(mailboxes)
+		.where(lte(mailboxes.expiresAt, now));
 
-	// 删除过期的邮箱（CASCADE 会自动删除相关邮件和附件）
-	await db.delete(mailboxes).where(lte(mailboxes.expiresAt, now));
+	if (expiredMailboxes.length === 0) return;
+
+	const mailboxIds = expiredMailboxes.map((item) => item.id);
+	const expiredEmailRows = await db
+		.select({ id: emails.id })
+		.from(emails)
+		.where(inArray(emails.mailboxId, mailboxIds));
+
+	const emailIds = expiredEmailRows.map((item) => item.id);
+
+	if (emailIds.length > 0) {
+		const attachmentRows = await db
+			.select({ r2Key: attachments.r2Key })
+			.from(attachments)
+			.where(inArray(attachments.emailId, emailIds));
+
+		const r2Keys = attachmentRows
+			.map((item) => item.r2Key)
+			.filter((key): key is string => Boolean(key));
+
+		if (r2Keys.length > 0) {
+			await Promise.allSettled(r2Keys.map((key) => env.ATTACHMENTS.delete(key)));
+		}
+
+		await db.delete(attachments).where(inArray(attachments.emailId, emailIds));
+		await db.delete(emails).where(inArray(emails.id, emailIds));
+	}
+
+	await db.delete(mailboxes).where(inArray(mailboxes.id, mailboxIds));
 }
 
-// 获取邮箱统计信息
 export async function getMailboxStats(
 	db: ReturnType<typeof createDB>,
 	mailboxId: string,
@@ -160,10 +241,7 @@ export async function getMailboxStats(
 	unread: number;
 }> {
 	const [totalResult, unreadResult] = await Promise.all([
-		db
-			.select({ count: count() })
-			.from(emails)
-			.where(eq(emails.mailboxId, mailboxId)),
+		db.select({ count: count() }).from(emails).where(eq(emails.mailboxId, mailboxId)),
 		db
 			.select({ count: count() })
 			.from(emails)
@@ -176,69 +254,52 @@ export async function getMailboxStats(
 	};
 }
 
-// 上传附件到 R2
 export async function uploadAttachmentToR2(
 	r2: R2Bucket,
 	content: ArrayBuffer,
 	filename: string,
 	contentType: string,
 ): Promise<string> {
-	// 生成唯一的 R2 键
 	const timestamp = Date.now();
 	const randomId = nanoid();
 	const r2Key = `attachments/${timestamp}/${randomId}/${filename}`;
 
-	// 上传到 R2
 	await r2.put(r2Key, content, {
-		httpMetadata: {
-			contentType,
-		},
+		httpMetadata: { contentType },
 	});
 
 	return r2Key;
 }
 
-// 从 R2 获取附件
 export async function getAttachmentFromR2(
 	r2: R2Bucket,
 	r2Key: string,
 ): Promise<R2ObjectBody | null> {
-	const object = await r2.get(r2Key);
-	return object;
+	return r2.get(r2Key);
 }
 
-// 通过附件 ID 获取附件详情和文件内容
 export async function getAttachmentById(attachmentId: string): Promise<{
 	attachment: Attachment;
 	content: R2ObjectBody | null;
 } | null> {
 	const db = createDB();
-
-	// 获取附件记录
 	const attachmentResult = await db
 		.select()
 		.from(attachments)
 		.where(eq(attachments.id, attachmentId))
 		.limit(1);
 
-	if (attachmentResult.length === 0) {
-		return null;
-	}
+	if (attachmentResult.length === 0) return null;
 
 	const attachment = attachmentResult[0];
-
-	// 检查附件是否已上传到 R2
 	if (!attachment.r2Key || attachment.uploadStatus !== "uploaded") {
 		return { attachment, content: null };
 	}
 
-	// 从 R2 获取文件内容
 	const content = await getAttachmentFromR2(env.ATTACHMENTS, attachment.r2Key);
-
 	return { attachment, content };
 }
 
-// 存储邮件到数据库（供 worker 使用）
 export async function storeEmail(
 	db: ReturnType<typeof createDB>,
 	r2: R2Bucket,
@@ -263,7 +324,6 @@ export async function storeEmail(
 	toAddress: string,
 ): Promise<string> {
 	const emailId = nanoid();
-
 	const newEmail: NewEmail = {
 		id: emailId,
 		mailboxId,
@@ -278,10 +338,8 @@ export async function storeEmail(
 		isRead: false,
 	};
 
-	// 存储邮件
 	await db.insert(emails).values(newEmail);
 
-	// 处理附件：存储到 R2 并在数据库中保存元数据
 	if (parsedEmail.attachments && parsedEmail.attachments.length > 0) {
 		const newAttachments: NewAttachment[] = [];
 
@@ -289,14 +347,12 @@ export async function storeEmail(
 			const attachmentId = nanoid();
 			let r2Key: string | null = null;
 			let uploadStatus = "pending";
-
-			// 计算附件大小 - 如果postal-mime没有提供大小，从内容计算
 			let attachmentSize = attachment.size;
+
 			if (!attachmentSize && attachment.content) {
 				attachmentSize = attachment.content.byteLength;
 			}
 
-			// 如果有内容，上传到 R2
 			if (attachment.content) {
 				try {
 					r2Key = await uploadAttachmentToR2(
@@ -321,7 +377,7 @@ export async function storeEmail(
 				contentId: attachment.contentId || null,
 				isInline: attachment.related || false,
 				r2Key,
-				r2Bucket: r2Key ? "smail-attachments" : null,
+				r2Bucket: r2Key ? "ATTACHMENTS" : null,
 				uploadStatus,
 			});
 		}
@@ -333,3 +389,4 @@ export async function storeEmail(
 
 	return emailId;
 }
+
