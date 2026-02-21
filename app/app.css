@@ -127,7 +127,7 @@
 .glass-theme {
 	position: relative;
 	min-height: 100vh;
-	background-color: #0b1220;
+	background-color: transparent;
 	background-image: url("https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80");
 	background-position: center;
 	background-size: cover;
@@ -139,7 +139,7 @@
 	content: "";
 	position: fixed;
 	inset: 0;
-	background: rgba(2, 6, 23, 0.58);
+	background: transparent;
 	pointer-events: none;
 	z-index: 0;
 }
