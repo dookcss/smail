@@ -154,12 +154,31 @@ pnpm run test:email:custom <to> <from> <port>
 
 > 关键：工作流读取的是 `vars.*`，如果你把 `CF_MAIL_DOMAIN` 配到 Secrets，部署会回退到 `example.com`。
 
-#### 第三步：触发部署
+#### 第三步：Cloudflare 控制台必须完成的设置
+
+1. **Workers 自定义域名绑定**（推荐）
+   - Cloudflare Dashboard -> Workers & Pages -> 你的 Worker -> Triggers / Custom Domains
+   - 绑定站点域名，例如：`mail.dookcss.xx.kg`
+
+2. **DNS 记录确认**
+   - 若使用 Custom Domain，Cloudflare 通常会自动创建/接管对应记录；
+   - 若手动管理 DNS，确保 `mail` 子域正确指向 Worker。
+
+3. **Email Routing 开启并可接收**
+   - 开启 Email Routing；
+   - 配置 catch-all 或明确收件地址；
+   - 收件域需与 `CF_MAIL_DOMAIN` 一致（本示例为 `dookcss.xx.kg`）。
+
+4. **R2 / D1 / KV 资源可访问**
+   - 账号内可创建并读写对应资源；
+   - Token 对这些资源具备读写权限。
+
+#### 第四步：触发部署
 
 - 推送到 `main` 分支，或
 - 在 Actions 页面手动执行 `Deploy to Cloudflare Workers`
 
-#### 第四步：验证部署
+#### 第五步：验证部署
 
 在构建日志中确认：
 
@@ -167,7 +186,15 @@ pnpm run test:email:custom <to> <from> <port>
 - `SITE_URL` 是你的站点地址
 - Deploy 步骤成功
 
+线上访问示例：`https://mail.dookcss.xx.kg/`
+
 首次生效时，如页面仍显示旧域名邮箱，请点击“生成新邮箱”或清 Cookie（会话缓存旧邮箱）。
+
+#### 第六步：本项目示例配置（可直接参考）
+
+- `CF_MAIL_DOMAIN=dookcss.xx.kg`
+- `CF_SITE_URL=https://mail.dookcss.xx.kg`
+- 站点地址：`https://mail.dookcss.xx.kg/`
 
 ---
 
