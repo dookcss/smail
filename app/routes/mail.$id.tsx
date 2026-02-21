@@ -18,6 +18,81 @@ import { getMailDetailForMailbox } from "~/server/services/email-access";
 
 import type { Route } from "./+types/mail.$id";
 
+type AttachmentItem = {
+	id: string;
+	contentId: string | null;
+	uploadStatus: string;
+};
+
+function normalizeCid(value: string) {
+	return value.replace(/^cid:/i, "").replace(/[<>]/g, "").trim().toLowerCase();
+}
+
+function buildCidAttachmentMap(attachments: AttachmentItem[]) {
+	const map = new Map<string, string>();
+	for (const item of attachments) {
+		if (!item.contentId || item.uploadStatus !== "uploaded") continue;
+		const normalized = normalizeCid(item.contentId);
+		if (!normalized) continue;
+		map.set(normalized, `/inline-attachment/${item.id}`);
+	}
+	return map;
+}
+
+function rewriteCidInSrcset(srcset: string, cidMap: Map<string, string>) {
+	const parts = srcset.split(",");
+	const rewritten = parts.map((part) => {
+		const trimmed = part.trim();
+		if (!trimmed) return trimmed;
+		const [urlPart, ...descriptorParts] = trimmed.split(/\s+/);
+		if (!urlPart?.toLowerCase().startsWith("cid:")) return trimmed;
+		const target = cidMap.get(normalizeCid(urlPart));
+		if (!target) return trimmed;
+		return [target, ...descriptorParts].join(" ").trim();
+	});
+	return rewritten.join(", ");
+}
+
+function rewriteCidReferences(html: string, attachments: AttachmentItem[]) {
+	if (!html) return html;
+	const cidMap = buildCidAttachmentMap(attachments);
+	if (cidMap.size === 0) return html;
+
+	let result = html;
+
+	result = result.replace(
+		/(src|href|poster|background)\s*=\s*(["'])\s*cid:([^"']+)\2/gi,
+		(_match, attr: string, quote: string, cidValue: string) => {
+			const target = cidMap.get(normalizeCid(cidValue));
+			if (!target) return _match;
+			return `${attr}=${quote}${target}${quote}`;
+		},
+	);
+
+	result = result.replace(
+		/(src|href|poster|background)\s*=\s*cid:([^\s>]+)/gi,
+		(_match, attr: string, cidValue: string) => {
+			const target = cidMap.get(normalizeCid(cidValue));
+			if (!target) return _match;
+			return `${attr}=${target}`;
+		},
+	);
+
+	result = result.replace(/srcset\s*=\s*(["'])(.*?)\1/gi, (_match, quote: string, srcsetValue: string) => {
+		const rewritten = rewriteCidInSrcset(srcsetValue, cidMap);
+		return `srcset=${quote}${rewritten}${quote}`;
+	});
+
+	result = result.replace(/url\(\s*(["'])?cid:([^)'"\s]+)\1\s*\)/gi, (_match, quote: string | undefined, cidValue: string) => {
+		const target = cidMap.get(normalizeCid(cidValue));
+		if (!target) return _match;
+		const q = quote || "";
+		return `url(${q}${target}${q})`;
+	});
+
+	return result;
+}
+
 function generateEmailHTML(email: {
 	fromAddress: string;
 	toAddress: string;
@@ -25,9 +100,15 @@ function generateEmailHTML(email: {
 	htmlContent?: string | null;
 	textContent?: string | null;
 	receivedAt: Date;
-}) {
+}, attachments: AttachmentItem[]) {
+	const htmlWithCidReplaced = email.htmlContent
+		? rewriteCidReferences(email.htmlContent, attachments)
+		: null;
+
 	const content =
-		email.htmlContent || email.textContent?.replaceAll(String.fromCharCode(10), "<br>") || "";
+		htmlWithCidReplaced ||
+		email.textContent?.replaceAll(String.fromCharCode(10), "<br>") ||
+		"";
 
 	return `
 		<!DOCTYPE html>
@@ -127,7 +208,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	const db = createDB();
 	const { mailbox } = await requireSessionMailbox(request, db);
 	const { email, attachments } = await getMailDetailForMailbox(db, id, mailbox.id);
-	const emailHTML = generateEmailHTML(email);
+	const emailHTML = generateEmailHTML(email, attachments);
 
 	return data({ email, attachments, emailHTML });
 }
