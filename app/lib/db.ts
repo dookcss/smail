@@ -1,13 +1,5 @@
 import { env } from "cloudflare:workers";
-import {
-	and,
-	count,
-	desc,
-	eq,
-	gt,
-	inArray,
-	lte,
-} from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { nanoid } from "nanoid";
 import {
@@ -22,8 +14,51 @@ import {
 	mailboxes,
 } from "~/db/schema";
 
+const RAW_EMAIL_PREVIEW_MAX_CHARS = 2048;
+
+type BinaryContent = ArrayBuffer | Uint8Array;
+
 export function createDB() {
 	return drizzle(env.DB, { schema: { mailboxes, emails, attachments } });
+}
+
+function buildRawEmailPreview(
+	parsedEmail: {
+		messageId?: string;
+		from?: { address?: string };
+		subject?: string;
+	},
+	toAddress: string,
+): string {
+	const previewLines = [
+		`From: ${parsedEmail.from?.address || ""}`,
+		`To: ${toAddress}`,
+		`Subject: ${parsedEmail.subject || ""}`,
+		`Message-ID: ${parsedEmail.messageId || ""}`,
+		"[raw MIME stored in R2]",
+	];
+
+	return previewLines.join(" | ").slice(0, RAW_EMAIL_PREVIEW_MAX_CHARS);
+}
+
+function getBinarySize(content: BinaryContent): number {
+	return content.byteLength;
+}
+
+export async function uploadRawEmailToR2(
+	r2: R2Bucket,
+	emailId: string,
+	content: BinaryContent,
+): Promise<string> {
+	const timestamp = Date.now();
+	const randomId = nanoid();
+	const r2Key = `raw-emails/${timestamp}/${randomId}/${emailId}.eml`;
+
+	await r2.put(r2Key, content, {
+		httpMetadata: { contentType: "message/rfc822" },
+	});
+
+	return r2Key;
 }
 
 export async function getActiveMailboxByEmail(
@@ -94,6 +129,9 @@ export async function getEmailsByAddress(
 			textContent: emails.textContent,
 			htmlContent: emails.htmlContent,
 			rawEmail: emails.rawEmail,
+			rawEmailR2Key: emails.rawEmailR2Key,
+			rawEmailR2Bucket: emails.rawEmailR2Bucket,
+			rawEmailUploadStatus: emails.rawEmailUploadStatus,
 			receivedAt: emails.receivedAt,
 			isRead: emails.isRead,
 			size: emails.size,
@@ -180,10 +218,18 @@ export async function deleteEmail(
 	r2: R2Bucket,
 	emailId: string,
 ): Promise<void> {
-	const emailAttachments = await getEmailAttachments(db, emailId);
+	const [email, emailAttachments] = await Promise.all([
+		getEmailById(db, emailId),
+		getEmailAttachments(db, emailId),
+	]);
+
 	const r2Keys = emailAttachments
 		.map((item) => item.r2Key)
 		.filter((key): key is string => Boolean(key));
+
+	if (email?.rawEmailR2Key) {
+		r2Keys.push(email.rawEmailR2Key);
+	}
 
 	if (r2Keys.length > 0) {
 		await Promise.allSettled(r2Keys.map((key) => r2.delete(key)));
@@ -206,7 +252,7 @@ export async function cleanupExpiredEmails(
 
 	const mailboxIds = expiredMailboxes.map((item) => item.id);
 	const expiredEmailRows = await db
-		.select({ id: emails.id })
+		.select({ id: emails.id, rawEmailR2Key: emails.rawEmailR2Key })
 		.from(emails)
 		.where(inArray(emails.mailboxId, mailboxIds));
 
@@ -218,10 +264,14 @@ export async function cleanupExpiredEmails(
 			.from(attachments)
 			.where(inArray(attachments.emailId, emailIds));
 
-		const r2Keys = attachmentRows
+		const attachmentKeys = attachmentRows
 			.map((item) => item.r2Key)
 			.filter((key): key is string => Boolean(key));
+		const rawEmailKeys = expiredEmailRows
+			.map((item) => item.rawEmailR2Key)
+			.filter((key): key is string => Boolean(key));
 
+		const r2Keys = [...attachmentKeys, ...rawEmailKeys];
 		if (r2Keys.length > 0) {
 			await Promise.allSettled(r2Keys.map((key) => env.ATTACHMENTS.delete(key)));
 		}
@@ -256,7 +306,7 @@ export async function getMailboxStats(
 
 export async function uploadAttachmentToR2(
 	r2: R2Bucket,
-	content: ArrayBuffer,
+	content: BinaryContent,
 	filename: string,
 	contentType: string,
 ): Promise<string> {
@@ -316,14 +366,25 @@ export async function storeEmail(
 			size?: number;
 			contentId?: string;
 			related?: boolean;
-			content?: ArrayBuffer;
+			content?: BinaryContent;
 		}>;
 	},
-	rawEmail: string,
+	rawEmailContent: BinaryContent,
 	rawSize: number,
 	toAddress: string,
 ): Promise<string> {
 	const emailId = nanoid();
+	let rawEmailR2Key: string | null = null;
+	let rawEmailUploadStatus: "pending" | "uploaded" | "failed" = "pending";
+
+	try {
+		rawEmailR2Key = await uploadRawEmailToR2(r2, emailId, rawEmailContent);
+		rawEmailUploadStatus = "uploaded";
+	} catch (error) {
+		console.error("Failed to upload raw email to R2:", error);
+		rawEmailUploadStatus = "failed";
+	}
+
 	const newEmail: NewEmail = {
 		id: emailId,
 		mailboxId,
@@ -333,7 +394,10 @@ export async function storeEmail(
 		subject: parsedEmail.subject || null,
 		textContent: parsedEmail.text || null,
 		htmlContent: parsedEmail.html || null,
-		rawEmail,
+		rawEmail: buildRawEmailPreview(parsedEmail, toAddress),
+		rawEmailR2Key,
+		rawEmailR2Bucket: rawEmailR2Key ? "ATTACHMENTS" : null,
+		rawEmailUploadStatus,
 		size: rawSize,
 		isRead: false,
 	};
@@ -350,7 +414,7 @@ export async function storeEmail(
 			let attachmentSize = attachment.size;
 
 			if (!attachmentSize && attachment.content) {
-				attachmentSize = attachment.content.byteLength;
+				attachmentSize = getBinarySize(attachment.content);
 			}
 
 			if (attachment.content) {

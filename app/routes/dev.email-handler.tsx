@@ -26,7 +26,7 @@ interface ParsedEmail {
 		size?: number;
 		contentId?: string;
 		related?: boolean;
-		content?: ArrayBuffer;
+		content?: ArrayBuffer | Uint8Array;
 	}>;
 }
 
@@ -66,7 +66,7 @@ export async function action({ request }: ActionFunctionArgs) {
 			env.ATTACHMENTS,
 			mailbox.id,
 			parsedEmail,
-			rawEmail,
+			rawEmailBuffer,
 			rawEmailBuffer.length,
 			toAddress,
 		);

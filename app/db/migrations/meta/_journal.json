@@ -8,6 +8,14 @@
 			"when": 1749037492351,
 			"tag": "0000_tired_slayback",
 			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1761051900000,
+			"tag": "0001_store_raw_email_in_r2",
+			"breakpoints": true
 		}
 	]
 }
+

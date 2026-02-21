@@ -31,7 +31,12 @@ export const emails = sqliteTable(
 		subject: text("subject"),
 		textContent: text("text_content"),
 		htmlContent: text("html_content"),
-		rawEmail: text("raw_email").notNull(),
+		rawEmail: text("raw_email").notNull(), // 仅保存摘要，完整 raw MIME 存储在 R2
+		rawEmailR2Key: text("raw_email_r2_key"),
+		rawEmailR2Bucket: text("raw_email_r2_bucket"),
+		rawEmailUploadStatus: text("raw_email_upload_status")
+			.notNull()
+			.default("pending"), // pending, uploaded, failed
 		receivedAt: integer("received_at", { mode: "timestamp" })
 			.notNull()
 			.$defaultFn(() => new Date()),
