@@ -15,6 +15,16 @@
 			"when": 1761051900000,
 			"tag": "0001_store_raw_email_in_r2",
 			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1741790040000,
+			"tag": "0002_add_api_token",
+			"breakpoints": true
+		}
+	]
+}
 		}
 	]
 }

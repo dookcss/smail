@@ -454,3 +454,91 @@ export async function storeEmail(
 	return emailId;
 }
 
+
+// ==================== API Token 相关 ====================
+
+const API_TOKEN_LENGTH = 32;
+const MAILBOX_EXPIRY_HOURS = 24;
+
+export async function createMailboxWithToken(
+	db: ReturnType<typeof createDB>,
+	email: string,
+): Promise<Mailbox> {
+	const id = nanoid();
+	const apiToken = nanoid(API_TOKEN_LENGTH);
+	const now = new Date();
+	const expiresAt = new Date(now.getTime() + MAILBOX_EXPIRY_HOURS * 60 * 60 * 1000);
+
+	const newMailbox: NewMailbox = {
+		id,
+		email,
+		expiresAt,
+		isActive: true,
+		apiToken,
+	};
+
+	await db.insert(mailboxes).values(newMailbox);
+	const result = await db.select().from(mailboxes).where(eq(mailboxes.id, id)).limit(1);
+	return result[0];
+}
+
+export async function deactivateMailbox(
+	db: ReturnType<typeof createDB>,
+	mailboxId: string,
+): Promise<void> {
+	await db
+		.update(mailboxes)
+		.set({ isActive: false, apiToken: null })
+		.where(eq(mailboxes.id, mailboxId));
+}
+
+export async function getEmailsByMailboxId(
+	db: ReturnType<typeof createDB>,
+	mailboxId: string,
+	page = 1,
+	limit = 20,
+) {
+	const offset = (page - 1) * limit;
+
+	const [items, totalResult] = await Promise.all([
+		db
+			.select()
+			.from(emails)
+			.where(eq(emails.mailboxId, mailboxId))
+			.orderBy(desc(emails.receivedAt))
+			.limit(limit)
+			.offset(offset),
+		db
+			.select({ count: count() })
+			.from(emails)
+			.where(eq(emails.mailboxId, mailboxId)),
+	]);
+
+	return { items, total: totalResult[0]?.count ?? 0 };
+}
+
+export async function getEmailByIdForMailboxDirect(
+	db: ReturnType<typeof createDB>,
+	emailId: string,
+	mailboxId: string,
+) {
+	const result = await db
+		.select()
+		.from(emails)
+		.where(and(eq(emails.id, emailId), eq(emails.mailboxId, mailboxId)))
+		.limit(1);
+	return result[0] ?? null;
+}
+
+export async function getNewEmailsSince(
+	db: ReturnType<typeof createDB>,
+	mailboxId: string,
+	since: Date,
+) {
+	return db
+		.select()
+		.from(emails)
+		.where(and(eq(emails.mailboxId, mailboxId), gt(emails.receivedAt, since)))
+		.orderBy(desc(emails.receivedAt));
+}
+

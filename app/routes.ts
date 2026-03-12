@@ -18,6 +18,7 @@ export default [
 		route("/attachment/:id", "routes/attachment.$id.tsx"),
 	route("/inline-attachment/:id", "routes/inline-attachment.$id.tsx"),
 	route("/dev/email-handler", "routes/dev.email-handler.tsx"),
+	route("/api/v1/*", "routes/api.v1.$.tsx"),
 	route("/sitemap.xml", "routes/sitemap[.]xml.tsx"),
 	route("/robots.txt", "routes/robots[.]txt.tsx"),
 	route("/site.webmanifest", "routes/site[.]webmanifest.tsx"),

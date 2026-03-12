@@ -12,10 +12,12 @@ export const mailboxes = sqliteTable(
 			.$defaultFn(() => new Date()),
 		expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
 		isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+		apiToken: text("api_token"),
 	},
 	(table) => [
 		index("idx_mailboxes_email").on(table.email),
 		index("idx_mailboxes_expires_at").on(table.expiresAt),
+		index("idx_mailboxes_api_token").on(table.apiToken),
 	],
 );
 
