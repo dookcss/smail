@@ -228,12 +228,12 @@ jobs:
       - name: Apply D1 migrations (remote)
         run: pnpm wrangler d1 migrations apply "${D1_NAME}" --remote
 
+      - name: Deploy
+        run: pnpm run deploy
+
       - name: Sync Worker secret (SESSION_SECRET)
         run: |
           echo "${CF_SESSION_SECRET}" | pnpm wrangler secret put SESSION_SECRET
-
-      - name: Deploy
-        run: pnpm run deploy
 
       - name: Deployment summary
         if: always()
