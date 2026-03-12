@@ -207,6 +207,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 									</Form>
 								</div>
 
+								<p className="text-xs text-white/40 text-center mt-1">若无法获取邮件，可能当日 Cloudflare KV/D1 免费额度已耗尽</p>
+
 							</CardContent>
 						</Card>
 
