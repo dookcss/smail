@@ -22,9 +22,13 @@
 			"when": 1741790040000,
 			"tag": "0002_add_api_token",
 			"breakpoints": true
-		}
-	]
-}
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1741876440000,
+			"tag": "0003_add_sessions_table",
+			"breakpoints": true
 		}
 	]
 }

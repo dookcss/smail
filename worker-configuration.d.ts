@@ -3,7 +3,6 @@
 // Runtime types generated with workerd@1.20250525.0 2025-04-04
 declare namespace Cloudflare {
 	interface Env {
-		KV: KVNamespace;
 		VALUE_FROM_CLOUDFLARE: "Hello from Cloudflare";
 		SESSION_SECRET: string;
 		ATTACHMENTS: R2Bucket;

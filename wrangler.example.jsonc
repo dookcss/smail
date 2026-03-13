@@ -11,12 +11,6 @@
 			"name": "EMAIL"
 		}
 	],
-	"kv_namespaces": [
-		{
-			"binding": "KV",
-			"id": "YOUR_KV_NAMESPACE_ID_HERE"
-		}
-	],
 	"d1_databases": [
 		{
 			"binding": "DB",

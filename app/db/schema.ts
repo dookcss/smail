@@ -108,3 +108,17 @@ export type NewEmail = typeof emails.$inferInsert;
 
 export type Attachment = typeof attachments.$inferSelect;
 export type NewAttachment = typeof attachments.$inferInsert;
+
+// Session 表 - 替代 KV 存储 session 数据
+export const sessions = sqliteTable(
+	"sessions",
+	{
+		id: text("id").primaryKey(),
+		data: text("data").notNull().default("{}"),
+		expiresAt: integer("expires_at"),
+	},
+	(table) => [index("idx_sessions_expires_at").on(table.expiresAt)],
+);
+
+export type Session = typeof sessions.$inferSelect;
+export type NewSession = typeof sessions.$inferInsert;

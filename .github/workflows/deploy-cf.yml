@@ -19,15 +19,12 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CF_SESSION_SECRET: ${{ secrets.CF_SESSION_SECRET }}
-      CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
       CF_D1_DATABASE_ID: ${{ secrets.CF_D1_DATABASE_ID }}
-      CF_KV_NAMESPACE_TITLE: ${{ vars.CF_KV_NAMESPACE_TITLE }}
       CF_D1_DATABASE_NAME: ${{ vars.CF_D1_DATABASE_NAME }}
       CF_R2_BUCKET_NAME: ${{ vars.CF_R2_BUCKET_NAME }}
       CF_R2_PREVIEW_BUCKET_NAME: ${{ vars.CF_R2_PREVIEW_BUCKET_NAME }}
       CF_MAIL_DOMAIN: ${{ vars.CF_MAIL_DOMAIN }}
       CF_SITE_URL: ${{ vars.CF_SITE_URL }}
-
 
     steps:
       - name: Checkout
@@ -56,12 +53,11 @@ jobs:
       - name: Install dependencies (skip postinstall in CI)
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Resolve KV/D1/R2 resources (auto find or create)
+      - name: Resolve D1/R2 resources (auto find or create)
         shell: bash
         run: |
           set -euo pipefail
 
-          KV_TITLE="${CF_KV_NAMESPACE_TITLE:-smail-kv}"
           D1_NAME="${CF_D1_DATABASE_NAME:-smail-database}"
           R2_BUCKET_NAME="${CF_R2_BUCKET_NAME:-smail-attachments}"
           R2_PREVIEW_BUCKET_NAME="${CF_R2_PREVIEW_BUCKET_NAME:-smail-attachments-preview}"
@@ -80,124 +76,82 @@ jobs:
             exit 1
           fi
 
-          echo "Using KV title: $KV_TITLE"
-          echo "Using D1 name: $D1_NAME"
-          echo "Using R2 bucket: $R2_BUCKET_NAME"
-          echo "Using R2 preview bucket: $R2_PREVIEW_BUCKET_NAME"
-          echo "Cloudflare account id prefix: ${CLOUDFLARE_ACCOUNT_ID:0:8}..."
+          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
 
-          cf_call_url() {
-            local method="$1"
-            local url="$2"
-            local data="${3:-}"
-            local context="${4:-$2}"
-            local body_file headers_file status
-
-            body_file="$(mktemp)"
-            headers_file="$(mktemp)"
-
-            if [ -n "$data" ]; then
-              status="$(curl -sS -D "$headers_file" -o "$body_file" -w "%{http_code}" \
-                -X "$method" \
-                -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-                -H "Content-Type: application/json" \
-                --data "$data" \
-                "$url")"
-            else
-              status="$(curl -sS -D "$headers_file" -o "$body_file" -w "%{http_code}" \
-                -X "$method" \
-                -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-                -H "Content-Type: application/json" \
-                "$url")"
-            fi
-
-            if [ "$status" -ge 400 ]; then
-              echo "::error::Cloudflare API failed - ${context} (HTTP ${status})" >&2
-              echo "::group::Cloudflare API error detail - ${context}" >&2
-              if command -v jq >/dev/null 2>&1; then
-                jq -r '.errors[]? | "code=\(.code) message=\(.message)"' "$body_file" >&2 || true
-                jq '.' "$body_file" >&2 || cat "$body_file" >&2
-              else
-                cat "$body_file" >&2
-              fi
-              echo "::endgroup::" >&2
-              if [ "$status" -eq 403 ]; then
-                echo "::error::HTTP 403 usually means wrong token type, insufficient scope, account scope mismatch, or IP filtering on token." >&2
-              fi
-              rm -f "$body_file" "$headers_file"
-              exit 1
-            fi
-
-            cat "$body_file"
-            rm -f "$body_file" "$headers_file"
-          }
-
-          cf_account_call() {
-            local method="$1"
-            local path="$2"
-            local data="${3:-}"
-            local context="${4:-$2}"
-            cf_call_url "$method" "${CF_API_BASE}${path}" "$data" "$context"
-          }
-
-          echo "Verifying Cloudflare API token..."
-          TOKEN_VERIFY_JSON="$(cf_call_url GET "${CF_API_ROOT}/user/tokens/verify" "" "Verify API token")"
-          if command -v jq >/dev/null 2>&1; then
-            echo "Token status: $(echo "$TOKEN_VERIFY_JSON" | jq -r '.result.status // "unknown"')"
-            echo "Token id: $(echo "$TOKEN_VERIFY_JSON" | jq -r '.result.id // "unknown"')"
-          fi
-
-          if [ -n "${CF_KV_NAMESPACE_ID:-}" ]; then
-            KV_ID="$CF_KV_NAMESPACE_ID"
-            echo "Using KV from secret: $KV_ID"
-          else
-            KV_LIST_JSON="$(cf_account_call GET "/storage/kv/namespaces?page=1&per_page=1000" "" "List KV namespaces")"
-            KV_ID="$(echo "$KV_LIST_JSON" | jq -r --arg t "$KV_TITLE" '.result[]? | select(.title == $t) | .id' | head -n1 || true)"
-
-            if [ -z "${KV_ID:-}" ] || [ "$KV_ID" = "null" ]; then
-              echo "KV namespace not found, creating: $KV_TITLE"
-              KV_CREATE_JSON="$(cf_account_call POST "/storage/kv/namespaces" "$(jq -cn --arg title "$KV_TITLE" '{title:$title}')" "Create KV namespace: $KV_TITLE")"
-              KV_ID="$(echo "$KV_CREATE_JSON" | jq -r '.result.id // empty')"
-            fi
-          fi
-
+          # --- D1 ---
           if [ -n "${CF_D1_DATABASE_ID:-}" ]; then
             D1_ID="$CF_D1_DATABASE_ID"
-            echo "Using D1 from secret: $D1_ID"
+            echo "Using provided D1 ID: $D1_ID"
           else
-            D1_LIST_JSON="$(cf_account_call GET "/d1/database?page=1&per_page=1000" "" "List D1 databases")"
-            D1_ID="$(echo "$D1_LIST_JSON" | jq -r --arg n "$D1_NAME" '.result[]? | select(.name == $n) | (.uuid // .id)' | head -n1 || true)"
-
-            if [ -z "${D1_ID:-}" ] || [ "$D1_ID" = "null" ]; then
-              echo "D1 database not found, creating: $D1_NAME"
-              D1_CREATE_JSON="$(cf_account_call POST "/d1/database" "$(jq -cn --arg name "$D1_NAME" '{name:$name}')" "Create D1 database: $D1_NAME")"
-              D1_ID="$(echo "$D1_CREATE_JSON" | jq -r '.result.uuid // .result.id // empty')"
-            fi
-          fi
-
-          ensure_r2_bucket() {
-            local bucket_name="$1"
-            local list_json exists
-
-            list_json="$(cf_account_call GET "/r2/buckets" "" "List R2 buckets")"
-            exists="$(echo "$list_json" | jq -r --arg b "$bucket_name" 'if ([.result.buckets[]?.name] | index($b)) then "yes" else "no" end')"
-
-            if [ "$exists" != "yes" ]; then
-              echo "R2 bucket not found, creating: $bucket_name"
-              cf_account_call PUT "/r2/buckets/${bucket_name}" "{}" "Create R2 bucket: $bucket_name" >/dev/null
+            echo "Searching for D1 database: $D1_NAME"
+            D1_LIST=$(curl -sf -H "$AUTH" "${CF_API_BASE}/d1/database?name=${D1_NAME}&per_page=10")
+            D1_ID=$(echo "$D1_LIST" | jq -r '.result[0].uuid // empty')
+            if [ -z "$D1_ID" ]; then
+              echo "Creating D1 database: $D1_NAME"
+              D1_CREATE=$(curl -sf -X POST -H "$AUTH" -H "Content-Type: application/json" \
+                -d "{\"name\":\"${D1_NAME}\"}" "${CF_API_BASE}/d1/database")
+              D1_ID=$(echo "$D1_CREATE" | jq -r '.result.uuid')
+              [ -n "$D1_ID" ] || { echo "::error::Failed to create D1"; exit 1; }
+              echo "Created D1: $D1_ID"
             else
-              echo "R2 bucket exists: $bucket_name"
+              echo "Found D1: $D1_ID"
             fi
-          }
-
-          ensure_r2_bucket "$R2_BUCKET_NAME"
-          ensure_r2_bucket "$R2_PREVIEW_BUCKET_NAME"
-
-          if [ -z "${KV_ID:-}" ] || [ "$KV_ID" = "null" ]; then
-            echo "Failed to resolve KV namespace id" >&2
-            exit 1
           fi
 
+          # --- R2 ---
+          for BUCKET in "$R2_BUCKET_NAME" "$R2_PREVIEW_BUCKET_NAME"; do
+            echo "Checking R2 bucket: $BUCKET"
+            HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" -H "$AUTH" "${CF_API_BASE}/r2/buckets/${BUCKET}")
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "R2 bucket exists: $BUCKET"
+            else
+              echo "Creating R2 bucket: $BUCKET"
+              curl -sf -X POST -H "$AUTH" -H "Content-Type: application/json" \
+                -d "{\"name\":\"${BUCKET}\"}" "${CF_API_BASE}/r2/buckets" > /dev/null
+              echo "Created R2 bucket: $BUCKET"
+            fi
+          done
+
+          # --- Export ---
+          {
+            echo "D1_ID=$D1_ID"
+            echo "D1_NAME=$D1_NAME"
+            echo "R2_BUCKET_NAME=$R2_BUCKET_NAME"
+            echo "R2_PREVIEW_BUCKET_NAME=$R2_PREVIEW_BUCKET_NAME"
+            echo "MAIL_DOMAIN=$MAIL_DOMAIN"
+            echo "SITE_URL=$SITE_URL"
+          } >> "$GITHUB_ENV"
+
+      - name: Generate wrangler.jsonc from template
+        run: |
+          cp wrangler.example.jsonc wrangler.jsonc
+          sed -i "s|YOUR_D1_DATABASE_ID_HERE|${D1_ID}|g" wrangler.jsonc
+          sed -i "s|__MAIL_DOMAIN__|${MAIL_DOMAIN}|g" wrangler.jsonc
+          sed -i "s|__SITE_URL__|${SITE_URL}|g" wrangler.jsonc
+
+      - name: Run typecheck
+        run: pnpm run typecheck
+
+      - name: Apply D1 migrations (remote)
+        run: pnpm wrangler d1 migrations apply "${D1_NAME}" --remote
+
+      - name: Deploy
+        run: pnpm run deploy
+
+      - name: Sync Worker secret (SESSION_SECRET)
+        run: |
+          echo "${CF_SESSION_SECRET}" | pnpm wrangler secret put SESSION_SECRET
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "MAIL_DOMAIN: ${MAIL_DOMAIN:-unknown}"
+          echo "SITE_URL: ${SITE_URL:-unknown}"
+          echo "D1 database id: ${D1_ID:-unknown}"
+          echo "D1 database name: ${D1_NAME:-unknown}"
+          echo "R2 bucket: ${R2_BUCKET_NAME:-unknown}"
+          echo "R2 preview bucket: ${R2_PREVIEW_BUCKET_NAME:-unknown}"
+          echo "Done."
           if [ -z "${D1_ID:-}" ] || [ "$D1_ID" = "null" ]; then
             echo "Failed to resolve D1 database id" >&2
             exit 1
