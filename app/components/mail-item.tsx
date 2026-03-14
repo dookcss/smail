@@ -1,5 +1,6 @@
 import { Link } from "react-router";
-import { Avatar, AvatarFallback } from "~/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
+import { getGravatarUrl } from "~/lib/gravatar";
 import { cn } from "~/lib/utils";
 
 interface MailItemProps {
@@ -35,6 +36,7 @@ export function MailItem({
 }: MailItemProps) {
 	const safeName = (name || email || "?").trim();
 	const initials = safeName.slice(0, 2).toUpperCase();
+	const avatarUrl = getGravatarUrl(email, 80);
 
 	return (
 		<Link
@@ -47,6 +49,9 @@ export function MailItem({
 		>
 			<div className="flex items-start gap-3 sm:gap-4 min-w-0">
 				<Avatar className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 border border-white/22 bg-white/10">
+					{avatarUrl && (
+						<AvatarImage src={avatarUrl} alt={safeName} />
+					)}
 					<AvatarFallback className="text-xs sm:text-sm text-white bg-transparent">
 						{initials}
 					</AvatarFallback>
